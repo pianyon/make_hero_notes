@@ -275,8 +275,10 @@
 // ============================================================
 // Constants
 // ============================================================
-const TRAVEL_MS = 2000;
-const LEAD_IN_MS = 1000;
+const TRAVEL_MS     = 2000;
+const LEAD_IN_MS    = 1000;
+const HIT_WINDOW_MS = 50;   // ヒット判定ウィンドウ (ms)
+const DESPAWN_MS    = 350;  // ヒット後のノーツ消滅猶予 (ms)
 
 // ============================================================
 // State
@@ -473,7 +475,7 @@ function renderPool() {
   }
 }
 
-//============================================================
+// ============================================================
 // Render: Timeline
 // ============================================================
 function renderTimeline() {
@@ -660,13 +662,13 @@ function getAudioCtx() {
 }
 
 function playKick() {
-  const ctx = getAudioCtx();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
+  const actx = getAudioCtx();
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(actx.destination);
   osc.type = 'sine';
-  const t = ctx.currentTime;
+  const t = actx.currentTime;
   osc.frequency.setValueAtTime(150, t);
   osc.frequency.exponentialRampToValueAtTime(40, t + 0.06);
   gain.gain.setValueAtTime(0.9, t);
@@ -676,17 +678,17 @@ function playKick() {
 }
 
 function playClick(accent = false) {
-  const ctx = getAudioCtx();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
+  const actx = getAudioCtx();
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(actx.destination);
   osc.type = 'sine';
   osc.frequency.value = accent ? 1320 : 880;
-  gain.gain.setValueAtTime(accent ? 0.5 : 0.28, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.045);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.045);
+  gain.gain.setValueAtTime(accent ? 0.5 : 0.28, actx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.045);
+  osc.start(actx.currentTime);
+  osc.stop(actx.currentTime + 0.045);
 }
 
 // ============================================================
@@ -739,8 +741,8 @@ function renderPreviewFrame() {
   // Notes
   for (const note of preview.noteEvents) {
     const dt = note.absMs - cur;
-    if (!note.hit && dt <= 0 && dt > -50) note.hit = true;
-    if (dt > TRAVEL_MS || dt < -350) continue;
+    if (!note.hit && dt <= 0 && dt > -HIT_WINDOW_MS) note.hit = true;
+    if (dt > TRAVEL_MS || dt < -DESPAWN_MS) continue;
     const x = cx + (w - cx) * (dt / TRAVEL_MS);
     drawPNote(x, cy, note.hit, dt);
   }
@@ -749,7 +751,7 @@ function renderPreviewFrame() {
 function drawPNote(x, y, hit, dt) {
   const r = 13;
   if (hit) {
-    const fade = Math.max(0, 1 + dt / 350);
+    const fade = Math.max(0, 1 + dt / DESPAWN_MS);
     const sc = 1 + fade * 1.8;
     pCtx.globalAlpha = fade;
     const g = pCtx.createRadialGradient(x, y, 0, x, y, r * sc * 3);
@@ -847,11 +849,13 @@ function updateTimeLabel() {
 // ============================================================
 els.metaTitle.addEventListener('input', () => { chart.meta.title = els.metaTitle.value; });
 els.metaBpm.addEventListener('input', () => {
-  chart.timing.bpm = parseFloat(els.metaBpm.value) || 120;
+  const rawBpm = parseFloat(els.metaBpm.value);
+  chart.timing.bpm = rawBpm > 0 ? rawBpm : 120;
   rebuildPreviewEvents();
 });
 els.metaOffset.addEventListener('input', () => {
-  chart.timing.offsetMs = parseInt(els.metaOffset.value) || 0;
+  const rawOffset = parseInt(els.metaOffset.value);
+  chart.timing.offsetMs = Number.isFinite(rawOffset) ? rawOffset : 0;
   rebuildPreviewEvents();
 });
 els.metaSpb.addEventListener('change', () => {
