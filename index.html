@@ -54,7 +54,6 @@
     text-transform: uppercase;
   }
 
-  header .status { display: none; }
   .header-nav { margin-left: auto; margin-right: 110px; display: flex; gap: 8px; }
 
   .controls {
@@ -291,7 +290,6 @@
 
 <header>
   <h1>◆ Rhythm Player — Overlay</h1>
-  <span class="status" id="status">譜面・動画・音声を選択してください</span>
   <div class="header-nav">
     <a href="editor.html" class="nav-link">Editor</a>
     <a href="help.html" class="nav-link">? Help</a>
@@ -365,9 +363,11 @@
 <script>
 'use strict';
 
-const NOTE_Y    = 0.90;   // ノーツ描画Y位置（video-wrap高さに対する比率）
-const STRIP_H   = 80;     // 背景ストリップの高さ (px)
-const TRAVEL_MS = 2000;   // ノーツが右端→判定ラインまでの移動時間 (ms)
+const NOTE_Y        = 0.90;  // ノーツ描画Y位置（video-wrap高さに対する比率）
+const STRIP_H       = 80;    // 背景ストリップの高さ (px)
+const TRAVEL_MS     = 2000;  // ノーツが右端→判定ラインまでの移動時間 (ms)
+const HIT_WINDOW_MS = 50;    // ヒット判定ウィンドウ (ms)
+const DESPAWN_MS    = 350;   // ヒット後のノーツ消滅猶予 (ms)
 
 // ============================================================
 // State
@@ -401,7 +401,6 @@ const els = {
   stopBtn: $('stopBtn'),
   volumeSlider: $('volumeSlider'),
   sampleBtn: $('sampleBtn'),
-  status: $('status'),
   video: $('video'),
   audio: $('audio'),
   videoPlaceholder: $('videoPlaceholder'),
@@ -433,8 +432,10 @@ new ResizeObserver(resizeCanvas).observe(els.canvas);
 // Chart loading & note expansion
 // ============================================================
 function expandNoteEvents(chart) {
-  const bpm = parseFloat(els.bpmOverride.value) || chart.timing.bpm;
-  const offsetMs = parseFloat(els.offsetOverride.value) || chart.timing.offsetMs;
+  const rawBpm = parseFloat(els.bpmOverride.value);
+  const bpm = rawBpm > 0 ? rawBpm : chart.timing.bpm;
+  const rawOffset = parseFloat(els.offsetOverride.value);
+  const offsetMs = Number.isFinite(rawOffset) ? rawOffset : chart.timing.offsetMs;
   const stepsPerBeat = chart.timing.stepsPerBeat;
   const msPerStep = 60000 / bpm / stepsPerBeat;
 
@@ -480,9 +481,8 @@ els.chartFile.addEventListener('change', async (e) => {
     const text = await file.text();
     applyChart(JSON.parse(text));
     els.chartInfo.textContent = file.name;
-    setStatus('譜面読み込み完了');
   } catch (err) {
-    setStatus('譜面の読み込みに失敗: ' + err.message);
+    console.error('譜面の読み込みに失敗:', err);
   }
 });
 
@@ -517,10 +517,6 @@ function updatePlayability() {
   els.rewindBtn.disabled = !ready;
 }
 
-function setStatus(msg) {
-  els.status.textContent = msg;
-}
-
 // ============================================================
 // Playback control
 // ============================================================
@@ -531,7 +527,6 @@ els.playBtn.addEventListener('click', async () => {
     els.audio.play();
     if (state.videoUrl) els.video.play();
     els.playBtn.textContent = '⏸ Pause';
-    setStatus('再生中');
     requestAnimationFrame(loop);
     return;
   }
@@ -544,7 +539,6 @@ els.playBtn.addEventListener('click', async () => {
     if (state.rafId) cancelAnimationFrame(state.rafId);
     state.rafId = null;
     els.playBtn.textContent = '▶ Resume';
-    setStatus('一時停止中');
     return;
   }
 
@@ -564,10 +558,9 @@ els.playBtn.addEventListener('click', async () => {
     }
     els.playBtn.textContent = '⏸ Pause';
     els.stopBtn.disabled = false;
-    setStatus('再生中');
     requestAnimationFrame(loop);
   } catch (err) {
-    setStatus('再生エラー: ' + err.message);
+    console.error('再生エラー:', err);
     stopPlayback();
   }
 });
@@ -588,7 +581,6 @@ function stopPlayback() {
   if (state.rafId) cancelAnimationFrame(state.rafId);
   state.rafId = null;
   ctx.clearRect(0, 0, els.canvas.clientWidth, els.canvas.clientHeight);
-  setStatus('停止');
 }
 
 function seekToBeginning() {
@@ -611,13 +603,13 @@ function getAudioCtx() {
 }
 
 function playKick() {
-  const ctx = getAudioCtx();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
+  const actx = getAudioCtx();
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(actx.destination);
   osc.type = 'sine';
-  const t = ctx.currentTime;
+  const t = actx.currentTime;
   osc.frequency.setValueAtTime(150, t);
   osc.frequency.exponentialRampToValueAtTime(40, t + 0.06);
   gain.gain.setValueAtTime(0.9, t);
@@ -662,7 +654,7 @@ function loop() {
   for (const note of state.noteEvents) {
     const dt = note.absMs - currentMs;
 
-    if (!note.hit && dt <= 0 && dt > -50) {
+    if (!note.hit && dt <= 0 && dt > -HIT_WINDOW_MS) {
       note.hit = true;
       state.hitCount++;
       els.hitCountDisplay.textContent = state.hitCount;
@@ -671,7 +663,7 @@ function loop() {
     }
 
     if (dt > TRAVEL_MS) continue;
-    if (dt < -350) continue;
+    if (dt < -DESPAWN_MS) continue;
 
     const progress = 1 - (dt / TRAVEL_MS);
     const x = judgmentX + (w - judgmentX) * (1 - progress);
@@ -679,7 +671,6 @@ function loop() {
   }
 
   if (els.audio.ended) {
-    setStatus('再生完了');
     stopPlayback();
     return;
   }
@@ -717,7 +708,7 @@ function drawNote(x, y, hit, dt) {
   const radius = 18;
 
   if (hit) {
-    const fade = Math.max(0, 1 + dt / 350);
+    const fade = Math.max(0, 1 + dt / DESPAWN_MS);
     const burstScale = 1 + fade * 1.8;
 
     ctx.globalAlpha = fade;
@@ -808,7 +799,6 @@ els.sampleBtn.addEventListener('click', () => {
   };
   applyChart(sample);
   els.chartInfo.textContent = "サンプル譜面（読み込み済み）";
-  setStatus('サンプル譜面ロード完了');
 });
 
 // ============================================================
@@ -852,7 +842,6 @@ document.addEventListener('keydown', (e) => {
 // Init
 // ============================================================
 resizeCanvas();
-setStatus('準備完了 — 譜面と音声を読み込んでください');
 </script>
 
 </body>
