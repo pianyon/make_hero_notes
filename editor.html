@@ -420,135 +420,132 @@ function rebuildPreviewEvents() {
 // ============================================================
 // Render: Pool
 // ============================================================
-function renderPool() {
-  els.poolList.replaceChildren();
-  for (const [id, pattern] of Object.entries(chart.patterns)) {
-    const card = document.createElement('div');
-    card.className = 'pattern-card' + (id === selectedPatternId ? ' selected' : '');
-    card.draggable = true;
-    card.dataset.id = id;
+function createPatternCard(id, pattern) {
+  const card = document.createElement('div');
+  card.className = 'pattern-card' + (id === selectedPatternId ? ' selected' : '');
+  card.draggable = true;
+  card.dataset.id = id;
 
-    const nameInput = document.createElement('input');
-    nameInput.className = 'card-name-input';
-    nameInput.value = pattern.name;
-    nameInput.placeholder = 'Pattern name';
-    nameInput.addEventListener('mousedown', e => e.stopPropagation());
-    nameInput.addEventListener('input', () => {
-      chart.patterns[id].name = nameInput.value;
-      els.timelineTrack.querySelectorAll('.tl-block').forEach(block => {
-        if (chart.timeline[parseInt(block.dataset.index)]?.patternId === id) {
-          const nameEl = block.querySelector('.tl-name');
-          if (nameEl) nameEl.textContent = nameInput.value;
-        }
-      });
-      if (selectedPatternId === id) {
-        els.seqTitle.textContent = 'Step Sequencer — ' + (nameInput.value || id);
+  const nameInput = document.createElement('input');
+  nameInput.className = 'card-name-input';
+  nameInput.value = pattern.name;
+  nameInput.placeholder = 'Pattern name';
+  nameInput.addEventListener('mousedown', e => e.stopPropagation());
+  nameInput.addEventListener('input', () => {
+    chart.patterns[id].name = nameInput.value;
+    els.timelineTrack.querySelectorAll('.tl-block').forEach(block => {
+      if (chart.timeline[parseInt(block.dataset.index)]?.patternId === id) {
+        const nameEl = block.querySelector('.tl-name');
+        if (nameEl) nameEl.textContent = nameInput.value;
       }
     });
+    if (selectedPatternId === id) {
+      els.seqTitle.textContent = 'Step Sequencer — ' + (nameInput.value || id);
+    }
+  });
 
-    const countSpan = document.createElement('span');
-    countSpan.className = 'card-count';
-    countSpan.textContent = pattern.notes.length || '';
+  const countSpan = document.createElement('span');
+  countSpan.className = 'card-count';
+  countSpan.textContent = pattern.notes.length || '';
 
-    const delBtn = document.createElement('button');
-    delBtn.className = 'card-del';
-    delBtn.textContent = '×';
-    delBtn.title = '削除';
-    delBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (confirm(`"${pattern.name}" を削除しますか？`)) deletePattern(id);
-    });
+  const delBtn = document.createElement('button');
+  delBtn.className = 'card-del';
+  delBtn.textContent = '×';
+  delBtn.title = '削除';
+  delBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (confirm(`"${pattern.name}" を削除しますか？`)) deletePattern(id);
+  });
 
-    card.appendChild(nameInput);
-    card.appendChild(countSpan);
-    card.appendChild(delBtn);
-    card.addEventListener('click', () => selectPattern(id));
+  card.appendChild(nameInput);
+  card.appendChild(countSpan);
+  card.appendChild(delBtn);
+  card.addEventListener('click', () => selectPattern(id));
+  card.addEventListener('dragstart', (e) => {
+    drag.source = { type: 'pool', patternId: id };
+    e.dataTransfer.effectAllowed = 'copy';
+    requestAnimationFrame(() => card.classList.add('dragging'));
+  });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
 
-    card.addEventListener('dragstart', (e) => {
-      drag.source = { type: 'pool', patternId: id };
-      e.dataTransfer.effectAllowed = 'copy';
-      requestAnimationFrame(() => card.classList.add('dragging'));
-    });
-    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  return card;
+}
 
-    els.poolList.appendChild(card);
-  }
+function renderPool() {
+  els.poolList.replaceChildren(
+    ...Object.entries(chart.patterns).map(([id, pattern]) => createPatternCard(id, pattern))
+  );
 }
 
 // ============================================================
 // Render: Timeline
 // ============================================================
-function renderTimeline() {
-  els.timelineTrack.replaceChildren();
+function createTimelineBlock(entry, i) {
+  const pattern = chart.patterns[entry.patternId];
+  if (!pattern) return null;
 
-  chart.timeline.forEach((entry, i) => {
-    const pattern = chart.patterns[entry.patternId];
-    if (!pattern) return;
+  const block = document.createElement('div');
+  block.className = 'tl-block';
+  block.draggable = true;
+  block.dataset.index = i;
 
-    const block = document.createElement('div');
-    block.className = 'tl-block';
-    block.draggable = true;
-    block.dataset.index = i;
+  const nameEl = document.createElement('span');
+  nameEl.className = 'tl-name';
+  nameEl.textContent = pattern.name;
 
-    const nameEl = document.createElement('span');
-    nameEl.className = 'tl-name';
-    nameEl.textContent = pattern.name;
+  const repeatWrap = document.createElement('span');
+  repeatWrap.className = 'tl-repeat';
 
-    const repeatWrap = document.createElement('span');
-    repeatWrap.className = 'tl-repeat';
+  const repeatInput = document.createElement('input');
+  repeatInput.type = 'number';
+  repeatInput.min = 1;
+  repeatInput.max = 99;
+  repeatInput.value = entry.repeat || 1;
+  repeatInput.addEventListener('change', () => {
+    entry.repeat = Math.max(1, parseInt(repeatInput.value) || 1);
+    repeatInput.value = entry.repeat;
+    rebuildPreviewEvents();
+  });
+  repeatInput.addEventListener('click', e => e.stopPropagation());
+  repeatInput.addEventListener('mousedown', e => e.stopPropagation());
 
-    const repeatLabel = document.createTextNode('×');
-    const repeatInput = document.createElement('input');
-    repeatInput.type = 'number';
-    repeatInput.min = 1;
-    repeatInput.max = 99;
-    repeatInput.value = entry.repeat || 1;
-    repeatInput.addEventListener('change', () => {
-      entry.repeat = Math.max(1, parseInt(repeatInput.value) || 1);
-      repeatInput.value = entry.repeat;
-      rebuildPreviewEvents();
-    });
-    repeatInput.addEventListener('click', e => e.stopPropagation());
-    repeatInput.addEventListener('mousedown', e => e.stopPropagation());
+  repeatWrap.appendChild(document.createTextNode('×'));
+  repeatWrap.appendChild(repeatInput);
 
-    repeatWrap.appendChild(repeatLabel);
-    repeatWrap.appendChild(repeatInput);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'tl-del';
-    delBtn.textContent = '×';
-    delBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      chart.timeline.splice(i, 1);
-      renderTimeline();
-      rebuildPreviewEvents();
-    });
-
-    block.appendChild(nameEl);
-    block.appendChild(repeatWrap);
-    block.appendChild(delBtn);
-
-    block.addEventListener('dragstart', (e) => {
-      drag.source = { type: 'timeline', index: i };
-      e.dataTransfer.effectAllowed = 'move';
-      e.stopPropagation();
-    });
-    block.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      clearInsertMarkers();
-      block.classList.add('insert-before');
-    });
-    block.addEventListener('dragleave', () => block.classList.remove('insert-before'));
-    block.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      handleTimelineDrop(i);
-    });
-
-    els.timelineTrack.appendChild(block);
+  const delBtn = document.createElement('button');
+  delBtn.className = 'tl-del';
+  delBtn.textContent = '×';
+  delBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    chart.timeline.splice(i, 1);
+    renderTimeline();
+    rebuildPreviewEvents();
   });
 
-  // End drop zone
+  block.appendChild(nameEl);
+  block.appendChild(repeatWrap);
+  block.appendChild(delBtn);
+  block.addEventListener('dragstart', (e) => {
+    drag.source = { type: 'timeline', index: i };
+    e.dataTransfer.effectAllowed = 'move';
+    e.stopPropagation();
+  });
+  block.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    clearInsertMarkers();
+    block.classList.add('insert-before');
+  });
+  block.addEventListener('dragleave', () => block.classList.remove('insert-before'));
+  block.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleTimelineDrop(i);
+  });
+
+  return block;
+}
+
+function createTimelineEndZone() {
   const endZone = document.createElement('div');
   endZone.className = 'tl-end-zone';
   endZone.textContent = chart.timeline.length ? '+ ここにドロップ' : 'Pool からパターンをドラッグ';
@@ -563,7 +560,12 @@ function renderTimeline() {
     endZone.classList.remove('drag-over');
     handleTimelineDrop(chart.timeline.length);
   });
-  els.timelineTrack.appendChild(endZone);
+  return endZone;
+}
+
+function renderTimeline() {
+  const blocks = chart.timeline.map((entry, i) => createTimelineBlock(entry, i)).filter(Boolean);
+  els.timelineTrack.replaceChildren(...blocks, createTimelineEndZone());
 }
 
 function clearInsertMarkers() {
@@ -592,6 +594,44 @@ function handleTimelineDrop(insertIndex) {
 // ============================================================
 // Render: Sequencer
 // ============================================================
+function createBeatColumn(beat, spb, activeSteps) {
+  const col = document.createElement('div');
+  col.className = 'beat-col';
+
+  const beatNum = document.createElement('div');
+  beatNum.className = 'beat-num';
+  beatNum.textContent = beat + 1;
+
+  const stepsRow = document.createElement('div');
+  stepsRow.className = 'beat-steps';
+
+  for (let s = 0; s < spb; s++) {
+    const step = beat * spb + s;
+    const cell = document.createElement('div');
+    cell.className = 'step-cell' + (activeSteps.has(step) ? ' active' : '');
+    cell.dataset.step = step;
+
+    cell.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const hasNote = chart.patterns[selectedPatternId]?.notes.some(n => n.step === step);
+      paintMode = hasNote ? 'erase' : 'paint';
+      toggleNote(selectedPatternId, step);
+    });
+    cell.addEventListener('mouseenter', () => {
+      if (!paintMode || !selectedPatternId) return;
+      const hasNote = chart.patterns[selectedPatternId]?.notes.some(n => n.step === step);
+      if (paintMode === 'paint' && !hasNote) toggleNote(selectedPatternId, step);
+      if (paintMode === 'erase' && hasNote) toggleNote(selectedPatternId, step);
+    });
+
+    stepsRow.appendChild(cell);
+  }
+
+  col.appendChild(beatNum);
+  col.appendChild(stepsRow);
+  return col;
+}
+
 function renderSequencer() {
   const pattern = chart.patterns[selectedPatternId];
   if (!pattern) {
@@ -609,45 +649,9 @@ function renderSequencer() {
 
   const grid = document.createElement('div');
   grid.className = 'seq-grid';
-
   for (let beat = 0; beat < pattern.lengthInBeats; beat++) {
-    const col = document.createElement('div');
-    col.className = 'beat-col';
-
-    const beatNum = document.createElement('div');
-    beatNum.className = 'beat-num';
-    beatNum.textContent = beat + 1;
-
-    const stepsRow = document.createElement('div');
-    stepsRow.className = 'beat-steps';
-
-    for (let s = 0; s < spb; s++) {
-      const step = beat * spb + s;
-      const cell = document.createElement('div');
-      cell.className = 'step-cell' + (activeSteps.has(step) ? ' active' : '');
-      cell.dataset.step = step;
-
-      cell.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const hasNote = chart.patterns[selectedPatternId]?.notes.some(n => n.step === step);
-        paintMode = hasNote ? 'erase' : 'paint';
-        toggleNote(selectedPatternId, step);
-      });
-      cell.addEventListener('mouseenter', () => {
-        if (!paintMode || !selectedPatternId) return;
-        const hasNote = chart.patterns[selectedPatternId]?.notes.some(n => n.step === step);
-        if (paintMode === 'paint' && !hasNote) toggleNote(selectedPatternId, step);
-        if (paintMode === 'erase' && hasNote) toggleNote(selectedPatternId, step);
-      });
-
-      stepsRow.appendChild(cell);
-    }
-
-    col.appendChild(beatNum);
-    col.appendChild(stepsRow);
-    grid.appendChild(col);
+    grid.appendChild(createBeatColumn(beat, spb, activeSteps));
   }
-
   els.seqGrid.replaceChildren(grid);
 }
 
