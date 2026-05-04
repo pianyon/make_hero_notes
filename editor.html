@@ -945,7 +945,20 @@ els.exportBtn.addEventListener('click', () => {
 });
 
 function loadChart(json) {
-  Object.assign(chart, json);
+  if (!json.timing || !json.patterns || !Array.isArray(json.timeline)) {
+    throw new Error('Invalid chart: timing / patterns / timeline が見つかりません');
+  }
+  if (json.version && json.version !== '1.0') {
+    console.warn('Chart version mismatch: expected 1.0, got', json.version);
+  }
+
+  chart.version  = json.version ?? '1.0';
+  chart.meta     = { ...json.meta };
+  chart.media    = { ...json.media };
+  chart.timing   = { ...json.timing };
+  chart.patterns = { ...json.patterns };
+  chart.timeline = [...json.timeline];
+
   patternCounter = 0;
   for (const id of Object.keys(chart.patterns)) {
     const n = parseInt(id.replace(/\D/g, ''));
