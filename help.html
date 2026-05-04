@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rhythm Tool — Help</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-panel: #14141c;
+    --bg-panel2: #1a1a26;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text-dim: #888899;
+    --accent: #00e5ff;
+    --note: #ffcc00;
+    --judgment: #ff3366;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .top-bar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 24px; background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .top-bar h1 {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.15em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 8px; margin-left: auto; }
+  .nav-link {
+    color: var(--text-dim); font-size: 11px; letter-spacing: 0.1em;
+    text-decoration: none; border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 2px;
+    font-weight: 600; text-transform: uppercase;
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .nav-link:hover { color: var(--accent); border-color: var(--accent); }
+
+  .content {
+    max-width: 820px; margin: 0 auto; padding: 48px 24px 80px;
+  }
+
+  h2 {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent);
+    margin-top: 48px; margin-bottom: 16px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  h2:first-child { margin-top: 0; }
+
+  h3 {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-dim);
+    margin-top: 28px; margin-bottom: 10px;
+  }
+
+  p { color: var(--text-dim); margin-bottom: 10px; }
+  p strong { color: var(--text); font-weight: 600; }
+
+  /* Shortcut table */
+  .shortcut-table {
+    width: 100%; border-collapse: collapse; margin-bottom: 8px;
+  }
+  .shortcut-table tr { border-bottom: 1px solid var(--border); }
+  .shortcut-table tr:last-child { border-bottom: none; }
+  .shortcut-table td {
+    padding: 8px 12px; vertical-align: top;
+  }
+  .shortcut-table td:first-child { width: 200px; }
+
+  kbd {
+    display: inline-block;
+    background: var(--bg-panel2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .desc { color: var(--text-dim); }
+
+  /* Workflow steps */
+  .steps { counter-reset: step; list-style: none; }
+  .steps li {
+    counter-increment: step;
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .steps li:last-child { border-bottom: none; }
+  .step-num {
+    flex-shrink: 0; width: 24px; height: 24px;
+    background: var(--bg-panel2); border: 1px solid var(--border);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--accent);
+  }
+  .step-body {}
+  .step-title { color: var(--text); font-weight: 700; margin-bottom: 4px; }
+  .step-detail { color: var(--text-dim); }
+
+  /* Callout */
+  .callout {
+    background: var(--bg-panel2); border-left: 3px solid var(--accent);
+    padding: 12px 16px; margin: 16px 0; border-radius: 0 2px 2px 0;
+  }
+  .callout.warn { border-left-color: var(--note); }
+  .callout p { margin: 0; }
+  .callout p + p { margin-top: 8px; }
+
+  /* Inline badge */
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 2px;
+  }
+  .badge-player { background: rgba(255,51,102,0.15); color: var(--judgment); border: 1px solid rgba(255,51,102,0.3); }
+  .badge-editor { background: rgba(0,229,255,0.1); color: var(--accent); border: 1px solid rgba(0,229,255,0.3); }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>◆ Rhythm Tool — Help</h1>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">← Player</a>
+    <a href="editor.html" class="nav-link">Editor →</a>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── Overview ── -->
+  <h2>Overview</h2>
+  <p>
+    このツールは <strong>Guitar Hero / Fap Hero スタイルの譜面を作って再生する</strong> ための2画面構成の Web アプリです。
+    <strong>Editor</strong> で譜面を作り、<strong>Player</strong> で動画・音声と同期させて再生します。
+    譜面は JSON ファイルで管理されます。
+  </p>
+
+  <!-- ── Workflow ── -->
+  <h2>作業フロー</h2>
+  <ol class="steps">
+    <li>
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">音声・動画を用意する</div>
+        <div class="step-detail">再生したい音声ファイル（mp3/wav 等）と、オーバーレイする動画ファイル（mp4 等）をローカルに用意します。動画は必須ではありません。</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Editor で BPM と Offset を設定する</div>
+        <div class="step-detail">曲の BPM と Offset を入力します。Offset の意味は下の「<strong>Offset とは</strong>」セクションを参照してください。Grid（分解能）は 16分音符（×4）がおすすめです。</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">パターンを作成する</div>
+        <div class="step-detail">左パネル「Patterns」で <strong>+ New Pattern</strong> を押してパターンを追加。名前を付け、ステップシーケンサーでノーツを打ち込みます。1パターンは8拍（デフォルト）のループ単位です。</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">タイムラインに並べる</div>
+        <div class="step-detail">パターンカードを右パネル上部の <strong>Timeline</strong> にドラッグ＆ドロップして配置します。ブロック右の <strong>×N</strong> を変えると繰り返し数を指定できます。ブロック同士もドラッグで並び替え可能です。</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">プレビューで確認する</div>
+        <div class="step-detail">画面下部の Preview でノーツの流れを確認します。<kbd>Space</kbd> で再生/一時停止、<kbd>,</kbd> で先頭に戻ります。メトロノームの小節頭クリック（高音）でリズムの合わせやすさを確認しましょう。</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="step-title">JSON をエクスポートする</div>
+        <div class="step-detail">右上の <strong>Export JSON</strong> で譜面ファイルを保存します。</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <div class="step-title">Player で再生する</div>
+        <div class="step-detail">Player 画面で 譜面 JSON・音声ファイル・動画ファイル を読み込みます。<kbd>Space</kbd> で再生、<kbd>Ctrl</kbd>+<kbd>Enter</kbd> でシアターモードに切り替えるとノーツと動画だけの全画面表示になります。</div>
+      </div>
+    </li>
+  </ol>
+
+  <!-- ── Offset ── -->
+  <h2>Offset とは</h2>
+  <p>
+    <strong>Offset（ms）</strong> は「音声ファイルの先頭から、最初の1拍目が来るまでの時間（ミリ秒）」です。
+  </p>
+  <div class="callout">
+    <p><strong>例：</strong> 音声ファイルの最初の 2 秒間がイントロや無音で、2 秒後に 1 拍目（ビート）が始まる場合 → <strong>Offset = 2000</strong></p>
+    <p>逆に音声がいきなり 1 拍目から始まる場合は <strong>Offset = 0</strong>（デフォルト）のままでOKです。</p>
+  </div>
+  <p>
+    Offset がズレていると、ノーツと音楽のリズムが噛み合わなくなります。
+    曲を聴きながらメトロノームのクリック音（プレビュー再生）がビートと一致するよう微調整してください。
+    <strong>10ms 単位</strong> で詰めると合わせやすいです。
+  </p>
+  <div class="callout warn">
+    <p>BPM や Offset を変更すると既存ノーツの実時間上の位置が変わります。譜面を打ち込む前に確定させるのを推奨します。</p>
+  </div>
+
+  <!-- ── Keyboard: Player ── -->
+  <h2>キーボードショートカット</h2>
+
+  <h3><span class="badge badge-player">Player</span></h3>
+  <table class="shortcut-table">
+    <tr>
+      <td><kbd>Space</kbd></td>
+      <td class="desc">再生 / 一時停止 / 再開</td>
+    </tr>
+    <tr>
+      <td><kbd>↑</kbd></td>
+      <td class="desc">音量 +10%</td>
+    </tr>
+    <tr>
+      <td><kbd>↓</kbd></td>
+      <td class="desc">音量 −10%</td>
+    </tr>
+    <tr>
+      <td><kbd>,</kbd></td>
+      <td class="desc">先頭に巻き戻す（動画・音声・ノーツすべてリセット）</td>
+    </tr>
+    <tr>
+      <td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td>
+      <td class="desc">シアターモード ↔ 通常 UI の切り替え</td>
+    </tr>
+  </table>
+  <p>※ テキスト入力欄にフォーカスが当たっているときはショートカットは無効になります。</p>
+
+  <h3><span class="badge badge-editor">Editor</span></h3>
+  <table class="shortcut-table">
+    <tr>
+      <td><kbd>Space</kbd></td>
+      <td class="desc">プレビュー 再生 / 一時停止</td>
+    </tr>
+    <tr>
+      <td><kbd>,</kbd></td>
+      <td class="desc">プレビューを先頭に巻き戻す（再生中の場合はそのまま再生継続）</td>
+    </tr>
+  </table>
+  <p>※ テキスト入力欄・セレクトボックスにフォーカス中はショートカット無効。パターン名編集中は <kbd>Enter</kbd> で確定、<kbd>Esc</kbd> でキャンセルも使えます。</p>
+
+  <!-- ── Tips ── -->
+  <h2>Tips</h2>
+
+  <h3>BPM が分からないとき</h3>
+  <p>BPM 検出ツール（例: <strong>Tap BPM</strong> 系の Web ツール）で曲に合わせてタップすると大体の BPM が得られます。その後 Offset でズレを微修正するのが効率的です。</p>
+
+  <h3>パターンの使い方</h3>
+  <p>「Aメロ」「サビ」「ブリッジ」のようにセクション単位でパターンを分けると、タイムライン上での管理が楽になります。同じフレーズはパターンを繰り返し（×N）で使い回せます。</p>
+
+  <h3>グリッド変更の注意</h3>
+  <p>Grid（分解能）を変更するとすべてのパターンのノーツがクリアされます。譜面を打ち込み始める前に決めてください。</p>
+
+  <h3>譜面 JSON のバックアップ</h3>
+  <p>ブラウザはデータを保存しません。こまめに <strong>Export JSON</strong> でファイルに保存してください。次回は <strong>Import JSON</strong> で読み込めます。</p>
+
+</div>
+
+</body>
+</html>
