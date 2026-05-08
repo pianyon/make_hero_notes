@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rhythm Player — Overlay</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-panel: #14141c;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text-dim: #888899;
+    --accent: #00e5ff;
+    --accent-glow: rgba(0, 229, 255, 0.6);
+    --judgment: #ff3366;
+    --judgment-glow: rgba(255, 51, 102, 0.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--bg-panel);
+  }
+
+  header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    margin: 0;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .header-nav { margin-left: auto; margin-right: 110px; display: flex; gap: 8px; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .control-group label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  input[type="file"] {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 12px;
+    border-radius: 2px;
+  }
+
+  button {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 8px 18px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s ease;
+  }
+
+  button:hover:not(:disabled) {
+    background: #fff;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  button:disabled {
+    background: var(--border);
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+
+  button.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  button.secondary:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: none;
+  }
+
+  .stage {
+    flex: 1;
+    background: #000;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* video-wrap がステージ全体を使い、canvas・pulse を上に重ねる */
+  .video-wrap {
+    flex: 1;
+    position: relative;
+    background: #000;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .video-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  /* canvas は video の真上に重なる */
+  #noteCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* pulse は NOTE_Y (90%) の位置に合わせる */
+  .pulse {
+    position: absolute;
+    left: 50%;
+    top: 90%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 50, 110, 0.9) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .pulse.active {
+    animation: pulseAnim 0.55s ease-out forwards;
+  }
+
+  @keyframes pulseAnim {
+    0%  { width: 0;     height: 0;     opacity: 1; }
+    30% {                              opacity: 1; }
+    100%{ width: 360px; height: 360px; opacity: 0; }
+  }
+
+  .info-bar {
+    display: flex;
+    gap: 24px;
+    padding: 8px 20px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .info-bar span strong {
+    color: var(--text);
+    margin-left: 6px;
+    font-weight: 600;
+  }
+
+  .info-bar .accent strong { color: var(--accent); }
+
+  .file-info {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .number-input {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 12px;
+    border-radius: 2px;
+    width: 80px;
+  }
+
+  #viewToggle {
+    position: fixed;
+    top: 10px;
+    right: 14px;
+    z-index: 200;
+    background: rgba(20, 20, 28, 0.75);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 2px;
+    backdrop-filter: blur(6px);
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  #viewToggle:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  body.minimal header,
+  body.minimal .controls,
+  body.minimal .info-bar {
+    display: none;
+  }
+
+  .nav-link {
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 2px;
+    font-family: inherit;
+    font-weight: 600;
+    text-transform: uppercase;
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .nav-link:hover { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<button id="viewToggle">⊟ シアター</button>
+
+<header>
+  <h1>◆ Rhythm Player — Overlay</h1>
+  <div class="header-nav">
+    <a href="editor.html" class="nav-link">Editor</a>
+    <a href="help.html" class="nav-link">? Help</a>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="control-group">
+    <label>譜面 (JSON)</label>
+    <input type="file" id="chartFile" accept=".json">
+    <div class="file-info" id="chartInfo">未選択</div>
+  </div>
+  <div class="control-group">
+    <label>動画</label>
+    <input type="file" id="videoFile" accept="video/*">
+    <div class="file-info" id="videoInfo">未選択</div>
+  </div>
+  <div class="control-group">
+    <label>音声</label>
+    <input type="file" id="audioFile" accept="audio/*">
+    <div class="file-info" id="audioInfo">未選択</div>
+  </div>
+  <div class="control-group">
+    <label>BPM 上書き</label>
+    <input type="number" class="number-input" id="bpmOverride" placeholder="auto" step="0.01">
+  </div>
+  <div class="control-group">
+    <label>Offset (ms)</label>
+    <input type="number" class="number-input" id="offsetOverride" placeholder="auto" step="10">
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="rewindBtn" disabled>|◀ Rewind</button>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button id="playBtn" disabled>▶ Play</button>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="stopBtn" disabled>■ Stop</button>
+  </div>
+  <div class="control-group">
+    <label>Volume</label>
+    <input type="range" id="volumeSlider" min="0" max="100" value="100" style="width:80px;accent-color:var(--accent);">
+  </div>
+  <div class="control-group">
+    <label>Video Speed</label>
+    <input type="range" id="videoSpeedSlider" min="10" max="400" value="100" style="width:80px;accent-color:var(--accent);">
+    <span id="videoSpeedDisplay" style="font-size:10px;color:var(--text-dim);">1.0x</span>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="sampleBtn">サンプル譜面ロード</button>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="editModeBtn">🎯 Edit Mode</button>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="clearBtn">🗑️ Clear</button>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="exportBtn" disabled>💾 Export</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="video-wrap">
+    <div class="video-placeholder" id="videoPlaceholder">VIDEO PLACEHOLDER</div>
+    <video id="video" style="display:none;" muted playsinline></video>
+    <canvas id="noteCanvas"></canvas>
+    <div class="pulse" id="pulse"></div>
+  </div>
+  <div class="info-bar">
+    <span class="accent">TIME: <strong id="timeDisplay">0.000</strong></span>
+    <span>BPM: <strong id="bpmDisplay">-</strong></span>
+    <span>OFFSET: <strong id="offsetDisplay">-</strong> ms</span>
+    <span>NOTES: <strong id="noteCountDisplay">0</strong></span>
+    <span>HITS: <strong id="hitCountDisplay">0</strong></span>
+  </div>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+
+<script>
+'use strict';
+
+const NOTE_Y        = 0.90;  // ノーツ描画Y位置（video-wrap高さに対する比率）
+const STRIP_H       = 80;    // 背景ストリップの高さ (px)
+const TRAVEL_MS     = 2000;  // ノーツが右端→判定ラインまでの移動時間 (ms)
+const HIT_WINDOW_MS = 50;    // ヒット判定ウィンドウ (ms)
+const DESPAWN_MS    = 350;   // ヒット後のノーツ消滅猶予 (ms)
+
+// ============================================================
+// State
+// ============================================================
+const state = {
+  chart: null,
+  videoUrl: null,
+  audioUrl: null,
+  noteEvents: [],
+  isPlaying: false,
+  isPaused: false,
+  rafId: null,
+  hitCount: 0,
+  editMode: false,
+  recordedBeats: [],
+  lastBeatTime: 0,
+  originalOffsetMs: 0, // Track original offset from loaded chart
+  countdownMode: false,
+  countdownValue: 0,
+  pauseTime: 0,
+};
+
+// ============================================================
+// DOM
+// ============================================================
+const $ = (id) => document.getElementById(id);
+const els = {
+  chartFile: $('chartFile'),
+  videoFile: $('videoFile'),
+  audioFile: $('audioFile'),
+  chartInfo: $('chartInfo'),
+  videoInfo: $('videoInfo'),
+  audioInfo: $('audioInfo'),
+  bpmOverride: $('bpmOverride'),
+  offsetOverride: $('offsetOverride'),
+  rewindBtn: $('rewindBtn'),
+  playBtn: $('playBtn'),
+  stopBtn: $('stopBtn'),
+  volumeSlider: $('volumeSlider'),
+  videoSpeedSlider: $('videoSpeedSlider'),
+  videoSpeedDisplay: $('videoSpeedDisplay'),
+  sampleBtn: $('sampleBtn'),
+  editModeBtn: $('editModeBtn'),
+  clearBtn: $('clearBtn'),
+  exportBtn: $('exportBtn'),
+  video: $('video'),
+  audio: $('audio'),
+  videoPlaceholder: $('videoPlaceholder'),
+  canvas: $('noteCanvas'),
+  pulse: $('pulse'),
+  timeDisplay: $('timeDisplay'),
+  bpmDisplay: $('bpmDisplay'),
+  offsetDisplay: $('offsetDisplay'),
+  noteCountDisplay: $('noteCountDisplay'),
+  hitCountDisplay: $('hitCountDisplay'),
+};
+
+const ctx = els.canvas.getContext('2d');
+
+// ============================================================
+// Canvas resize
+// ============================================================
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = els.canvas.getBoundingClientRect();
+  els.canvas.width = rect.width * dpr;
+  els.canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+// canvas の CSS サイズ変化（ウィンドウリサイズ・シアターモード切替含む）を確実に検知
+new ResizeObserver(resizeCanvas).observe(els.canvas);
+
+// ============================================================
+// Chart loading & note expansion
+// ============================================================
+function expandNoteEvents(chart) {
+  const rawBpm = parseFloat(els.bpmOverride.value);
+  const bpm = rawBpm > 0 ? rawBpm : chart.timing.bpm;
+  const rawOffset = parseFloat(els.offsetOverride.value);
+  const offsetMs = Number.isFinite(rawOffset) ? rawOffset : chart.timing.offsetMs;
+  const stepsPerBeat = chart.timing.stepsPerBeat;
+  const msPerStep = 60000 / bpm / stepsPerBeat;
+
+  const events = [];
+  let cursorBeats = 0;
+
+  for (const entry of chart.timeline) {
+    const pattern = chart.patterns[entry.patternId];
+    if (!pattern) continue;
+    const repeat = entry.repeat || 1;
+    for (let r = 0; r < repeat; r++) {
+      for (const note of pattern.notes) {
+        const absStep = cursorBeats * stepsPerBeat + note.step;
+        const absMs = offsetMs + absStep * msPerStep;
+        events.push({ absMs, hit: false });
+      }
+      cursorBeats += pattern.lengthInBeats;
+    }
+  }
+  events.sort((a, b) => a.absMs - b.absMs);
+  return { events, bpm, offsetMs };
+}
+
+function applyChart(chart) {
+  state.chart = chart;
+  const { events, bpm, offsetMs } = expandNoteEvents(chart);
+  state.noteEvents = events;
+  els.bpmDisplay.textContent = bpm.toFixed(2);
+  els.offsetDisplay.textContent = offsetMs;
+  els.noteCountDisplay.textContent = events.length;
+  els.hitCountDisplay.textContent = '0';
+  state.hitCount = 0;
+  updatePlayability();
+}
+
+// ============================================================
+// File handlers
+// ============================================================
+els.chartFile.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const chart = JSON.parse(text);
+    console.log('Loading chart:', chart);
+    applyChart(chart);
+    els.chartInfo.textContent = file.name;
+  } catch (err) {
+    console.error('譜面の読み込みに失敗:', err);
+  }
+});
+
+els.videoFile.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
+  state.videoUrl = URL.createObjectURL(file);
+  els.video.src = state.videoUrl;
+  els.video.style.display = 'block';
+  els.videoPlaceholder.style.display = 'none';
+  els.videoInfo.textContent = file.name;
+  updatePlayability();
+});
+
+// ============================================================
+// Video Loop - Loop video when it ends but audio continues
+// ============================================================
+// Video Loop - Loop video when it ends but audio continues
+// ============================================================
+els.video.addEventListener('ended', () => {
+  console.log('Video ended event fired');
+  console.log('State:', {
+    isPlaying: state.isPlaying,
+    isPaused: state.isPaused,
+    audioEnded: els.audio.ended,
+    videoDuration: els.video.duration,
+    audioDuration: els.audio.duration
+  });
+
+  // Only loop if audio is still playing
+  if (state.isPlaying && !state.isPaused && !els.audio.ended) {
+    console.log('Video ended, looping...');
+    els.video.currentTime = 0;
+    els.video.play().catch(err => console.error('Video loop error:', err));
+  }
+});
+
+// ============================================================
+// Video Speed Control
+// ============================================================
+els.videoSpeedSlider.addEventListener('input', () => {
+  const speed = els.videoSpeedSlider.value / 100;
+  els.video.playbackRate = speed;
+  els.videoSpeedDisplay.textContent = speed.toFixed(1) + 'x';
+  console.log('Video speed set to:', speed);
+});
+
+els.audioFile.addEventListener('change', (e) => {
+  const speed = els.videoSpeedSlider.value / 100;
+  els.video.playbackRate = speed;
+  els.videoSpeedDisplay.textContent = speed.toFixed(1) + 'x';
+});
+
+els.audioFile.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (state.audioUrl) URL.revokeObjectURL(state.audioUrl);
+  state.audioUrl = URL.createObjectURL(file);
+  els.audio.src = state.audioUrl;
+  els.audioInfo.textContent = file.name;
+  updatePlayability();
+});
+
+els.bpmOverride.addEventListener('change', () => { if (state.chart) applyChart(state.chart); });
+els.offsetOverride.addEventListener('change', () => { if (state.chart) applyChart(state.chart); });
+
+// ============================================================
+// Edit Mode Toggle
+// ============================================================
+els.editModeBtn.addEventListener('click', () => {
+  state.editMode = !state.editMode;
+  els.editModeBtn.textContent = state.editMode ? '🎯 Edit Mode ON' : '🎯 Edit Mode';
+  els.editModeBtn.style.background = state.editMode ? 'var(--accent)' : 'transparent';
+  els.editModeBtn.style.color = state.editMode ? 'var(--bg)' : 'var(--text)';
+
+  if (state.editMode) {
+    // If there's an existing chart, convert it to recorded beats for continuation
+    if (state.chart && state.noteEvents.length > 0) {
+      convertChartToRecordedBeats();
+    } else {
+      // Start fresh
+      state.recordedBeats = [];
+      state.lastBeatTime = 0;
+      state.originalOffsetMs = 0; // Track original offset
+      els.noteCountDisplay.textContent = '0';
+      els.hitCountDisplay.textContent = '0';
+      els.chartInfo.textContent = 'Recording Mode';
+    }
+
+    // Load saved beats from localStorage if available
+    loadFromLocalStorage();
+
+    // Enable export if we have beats
+    els.exportBtn.disabled = state.recordedBeats.length === 0;
+  } else {
+    // Convert recorded beats to chart format for playback
+    if (state.recordedBeats.length > 0) {
+      convertBeatsToChart();
+    }
+  }
+
+  // Update play button state
+  updatePlayability();
+});
+
+// ============================================================
+// Beat Recording (Spacebar)
+// ============================================================
+function recordBeat() {
+  if (!state.editMode || !state.isPlaying) return;
+
+  // Ignore beats during countdown
+  if (state.countdownMode) return;
+
+  const currentTime = els.audio.currentTime * 1000; // Convert to ms
+
+  // Prevent duplicate beats (minimum 100ms apart)
+  if (currentTime - state.lastBeatTime < 100) return;
+
+  state.lastBeatTime = currentTime;
+  state.recordedBeats.push(currentTime);
+
+  // Visual feedback
+  triggerPulse();
+  playKick();
+
+  // Update display
+  els.noteCountDisplay.textContent = state.recordedBeats.length;
+
+  // Save to localStorage
+  saveToLocalStorage();
+
+  // Enable export button
+  els.exportBtn.disabled = false;
+}
+
+// ============================================================
+// Convert Existing Chart to Recorded Beats
+// ============================================================
+function convertChartToRecordedBeats() {
+  if (!state.chart || !state.noteEvents || state.noteEvents.length === 0) return;
+
+  // Extract beat times from existing chart
+  state.recordedBeats = state.noteEvents.map(note => note.absMs);
+  state.lastBeatTime = state.recordedBeats.length > 0 ?
+    state.recordedBeats[state.recordedBeats.length - 1] : 0;
+
+  // Save the original offset from the chart
+  state.originalOffsetMs = state.chart.timing.offsetMs;
+
+  els.noteCountDisplay.textContent = state.recordedBeats.length;
+  els.chartInfo.textContent = `Continuing from ${state.recordedBeats.length} beats`;
+
+  // Save to localStorage
+  saveToLocalStorage();
+}
+
+// ============================================================
+// Convert Recorded Beats to Chart Format
+// ============================================================
+function convertBeatsToChart() {
+  if (state.recordedBeats.length === 0) return;
+
+  // Calculate BPM from recorded beats
+  const intervals = [];
+  for (let i = 1; i < state.recordedBeats.length; i++) {
+    intervals.push(state.recordedBeats[i] - state.recordedBeats[i - 1]);
+  }
+
+  // Find most common interval (mode)
+  const intervalCounts = {};
+  intervals.forEach(interval => {
+    const rounded = Math.round(interval / 10) * 10; // Round to nearest 10ms
+    intervalCounts[rounded] = (intervalCounts[rounded] || 0) + 1;
+  });
+
+  const mostCommonInterval = Object.entries(intervalCounts)
+    .sort((a, b) => b[1] - a[1])[0][0];
+
+  const estimatedBpm = 60000 / mostCommonInterval;
+
+  // Use original offset if available (when continuing from existing chart), otherwise use first beat
+  const offsetMs = state.originalOffsetMs !== undefined ? state.originalOffsetMs : state.recordedBeats[0];
+  const msPerStep = 60000 / estimatedBpm / 4; // 4 steps per beat
+
+  // Create chart
+  const chart = {
+    version: "1.0",
+    meta: {
+      title: "Recorded Beatmap",
+      author: "User",
+      createdAt: new Date().toISOString()
+    },
+    media: { video: "", audio: "", videoOffsetMs: 0 },
+    timing: {
+      bpm: Math.round(estimatedBpm * 100) / 100,
+      offsetMs: Math.round(offsetMs),
+      stepsPerBeat: 4
+    },
+    patterns: {
+      recorded: {
+        name: "Recorded",
+        lengthInBeats: Math.ceil((state.recordedBeats[state.recordedBeats.length - 1] - offsetMs) / (60000 / estimatedBpm)),
+        notes: state.recordedBeats.map((beatTime) => ({
+          step: Math.round((beatTime - offsetMs) / msPerStep)
+        }))
+      }
+    },
+    timeline: [
+      { patternId: "recorded", repeat: 1 }
+    ]
+  };
+
+  applyChart(chart);
+  els.chartInfo.textContent = 'Generated from recording';
+
+  console.log('Chart converted:', {
+    bpm: estimatedBpm.toFixed(2),
+    offsetMs: offsetMs,
+    noteCount: state.recordedBeats.length,
+    msPerStep: msPerStep.toFixed(2),
+    firstNoteStep: Math.round((state.recordedBeats[0] - offsetMs) / msPerStep),
+    lastNoteStep: Math.round((state.recordedBeats[state.recordedBeats.length - 1] - offsetMs) / msPerStep),
+    originalOffsetMs: state.originalOffsetMs
+  });
+}
+
+// ============================================================
+// Export Chart
+// ============================================================
+els.exportBtn.addEventListener('click', () => {
+  if (!state.chart && state.recordedBeats.length === 0) return;
+
+  // If in edit mode, convert beats first
+  if (state.editMode && state.recordedBeats.length > 0) {
+    convertBeatsToChart();
+  }
+
+  if (!state.chart) return;
+
+  const dataStr = JSON.stringify(state.chart, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `beatmap_${Date.now()}.json`;
+  link.click();
+
+  URL.revokeObjectURL(url);
+});
+
+// ============================================================
+// LocalStorage Persistence
+// ============================================================
+function saveToLocalStorage() {
+  const data = {
+    recordedBeats: state.recordedBeats,
+    timestamp: Date.now()
+  };
+  localStorage.setItem('hero_notes_recording', JSON.stringify(data));
+}
+
+function loadFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem('hero_notes_recording');
+    if (saved) {
+      const data = JSON.parse(saved);
+      state.recordedBeats = data.recordedBeats || [];
+      state.lastBeatTime = state.recordedBeats.length > 0 ?
+        state.recordedBeats[state.recordedBeats.length - 1] : 0;
+      els.noteCountDisplay.textContent = state.recordedBeats.length;
+      els.exportBtn.disabled = state.recordedBeats.length === 0;
+
+      if (state.recordedBeats.length > 0) {
+        els.chartInfo.textContent = `Loaded ${state.recordedBeats.length} beats`;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load from localStorage:', err);
+  }
+}
+
+function updatePlayability() {
+  const ready = !!(state.chart && state.audioUrl) || (state.editMode && state.audioUrl);
+  els.playBtn.disabled = !ready;
+  els.rewindBtn.disabled = !ready;
+}
+
+// ============================================================
+// Clear Button - Reset chart and recorded beats (keep video/audio)
+// ============================================================
+els.clearBtn.addEventListener('click', () => {
+  // Stop playback if running
+  if (state.isPlaying) {
+    stopPlayback();
+  }
+
+  // Clear chart and note events
+  state.chart = null;
+  state.noteEvents = [];
+
+  // Clear recorded beats
+  state.recordedBeats = [];
+  state.lastBeatTime = 0;
+  state.originalOffsetMs = 0;
+
+  // Clear localStorage
+  localStorage.removeItem('hero_notes_recording');
+
+  // Reset displays
+  els.noteCountDisplay.textContent = '0';
+  els.hitCountDisplay.textContent = '0';
+  els.bpmDisplay.textContent = '-';
+  els.offsetDisplay.textContent = '-';
+  els.chartInfo.textContent = '未選択';
+
+  // Disable export button
+  els.exportBtn.disabled = true;
+
+  // Update playability
+  updatePlayability();
+
+  // Clear canvas
+  ctx.clearRect(0, 0, els.canvas.clientWidth, els.canvas.clientHeight);
+
+  console.log('Cleared: chart, recorded beats, and localStorage (video/audio preserved)');
+});
+
+// ============================================================
+// Countdown Display
+// ============================================================
+function showCountdown(seconds) {
+  state.countdownMode = true;
+  state.countdownValue = seconds;
+
+  // Create countdown overlay if it doesn't exist
+  let countdownEl = document.getElementById('countdownOverlay');
+  if (!countdownEl) {
+    countdownEl = document.createElement('div');
+    countdownEl.id = 'countdownOverlay';
+    countdownEl.style.cssText = `
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 120px;
+      font-weight: bold;
+      color: var(--accent);
+      text-shadow: 0 0 30px var(--accent-glow);
+      z-index: 100;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.3);
+    `;
+    document.querySelector('.video-wrap').appendChild(countdownEl);
+  }
+
+  countdownEl.style.display = 'flex';
+  countdownEl.textContent = seconds;
+
+  const countdownInterval = setInterval(() => {
+    state.countdownValue--;
+    if (state.countdownValue > 0) {
+      countdownEl.textContent = state.countdownValue;
+    } else {
+      clearInterval(countdownInterval);
+      countdownEl.style.display = 'none';
+      state.countdownMode = false;
+    }
+  }, 1000);
+}
+
+// ============================================================
+// Playback control
+// ============================================================
+els.playBtn.addEventListener('click', async () => {
+  // 一時停止中 → 再開
+  if (state.isPlaying && state.isPaused) {
+    state.isPaused = false;
+
+    // In edit mode, go back 5 seconds and show countdown
+    if (state.editMode) {
+      const currentTime = els.audio.currentTime;
+      const resumeTime = Math.max(0, currentTime - 5);
+
+      // Set audio/video to 5 seconds before pause point
+      els.audio.currentTime = resumeTime;
+      if (state.videoUrl) els.video.currentTime = resumeTime;
+
+      // Show countdown
+      showCountdown(5);
+
+      // Wait for countdown then resume
+      setTimeout(async () => {
+        try {
+          await els.audio.play();
+          if (state.videoUrl) await els.video.play();
+          els.playBtn.textContent = '⏸ Pause';
+          requestAnimationFrame(loop);
+        } catch (err) {
+          console.error('再生エラー:', err);
+          stopPlayback();
+        }
+      }, 5000);
+    } else {
+      // Normal resume
+      els.audio.play();
+      if (state.videoUrl) els.video.play();
+      els.playBtn.textContent = '⏸ Pause';
+      requestAnimationFrame(loop);
+    }
+    return;
+  }
+
+  // 再生中 → 一時停止
+  if (state.isPlaying && !state.isPaused) {
+    state.isPaused = true;
+    state.pauseTime = els.audio.currentTime;
+    els.audio.pause();
+    els.video.pause();
+    if (state.rafId) cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+    els.playBtn.textContent = '▶ Resume';
+    return;
+  }
+
+  // 停止中 → 再生開始
+  state.isPlaying = true;
+  state.isPaused = false;
+  state.hitCount = 0;
+  state.noteEvents.forEach(n => n.hit = false);
+  els.hitCountDisplay.textContent = '0';
+
+  try {
+    els.audio.currentTime = 0;
+    await els.audio.play();
+    if (state.videoUrl) {
+      els.video.currentTime = 0;
+      await els.video.play();
+    }
+    els.playBtn.textContent = '⏸ Pause';
+    els.stopBtn.disabled = false;
+    requestAnimationFrame(loop);
+  } catch (err) {
+    console.error('再生エラー:', err);
+    stopPlayback();
+  }
+});
+
+els.stopBtn.addEventListener('click', stopPlayback);
+
+els.volumeSlider.addEventListener('input', () => {
+  els.audio.volume = els.volumeSlider.value / 100;
+});
+
+function stopPlayback() {
+  state.isPlaying = false;
+  state.isPaused = false;
+  els.audio.pause();
+  els.video.pause();
+  els.playBtn.textContent = '▶ Play';
+  els.stopBtn.disabled = true;
+  if (state.rafId) cancelAnimationFrame(state.rafId);
+  state.rafId = null;
+  ctx.clearRect(0, 0, els.canvas.clientWidth, els.canvas.clientHeight);
+}
+
+function seekToBeginning() {
+  els.audio.currentTime = 0;
+  if (state.videoUrl) els.video.currentTime = 0;
+  state.noteEvents.forEach(n => n.hit = false);
+  state.hitCount = 0;
+  els.hitCountDisplay.textContent = '0';
+}
+
+els.rewindBtn.addEventListener('click', seekToBeginning);
+
+// ============================================================
+// Kick drum (Web Audio API synthesis)
+// ============================================================
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new AudioContext();
+  return audioCtx;
+}
+
+function playKick() {
+  const actx = getAudioCtx();
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  osc.connect(gain);
+  gain.connect(actx.destination);
+  osc.type = 'sine';
+  const t = actx.currentTime;
+  osc.frequency.setValueAtTime(150, t);
+  osc.frequency.exponentialRampToValueAtTime(40, t + 0.06);
+  gain.gain.setValueAtTime(0.9, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+  osc.start(t);
+  osc.stop(t + 0.25);
+}
+
+// ============================================================
+// Render loop
+// ============================================================
+function loop() {
+  if (!state.isPlaying) return;
+
+  const currentMs = els.audio.currentTime * 1000;
+  els.timeDisplay.textContent = (currentMs / 1000).toFixed(3);
+
+  const w = els.canvas.clientWidth;
+  const h = els.canvas.clientHeight;
+  const judgmentX = w / 2;
+  const noteY = h * NOTE_Y;
+  const half = STRIP_H / 2;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // 動画上でノーツを見やすくする半透明ストリップ
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.40)';
+  ctx.fillRect(0, noteY - half, w, STRIP_H);
+
+  // 中央水平ガイドライン
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, noteY);
+  ctx.lineTo(w, noteY);
+  ctx.stroke();
+
+  // 判定ラインをキャンバスに描画
+  drawJudgmentLine(judgmentX, noteY, half);
+
+  // In edit mode, display recorded beats in real-time
+  if (state.editMode && state.recordedBeats.length > 0) {
+    for (const beatTime of state.recordedBeats) {
+      const dt = beatTime - currentMs;
+
+      // Only show beats that are approaching or have just passed
+      if (dt > TRAVEL_MS) continue;
+      if (dt < -DESPAWN_MS) continue;
+
+      const progress = 1 - (dt / TRAVEL_MS);
+      const x = judgmentX + (w - judgmentX) * (1 - progress);
+
+      // Draw recorded beat as a different color (green)
+      drawRecordedBeat(x, noteY, dt);
+    }
+  }
+
+  // ノーツ描画
+  for (const note of state.noteEvents) {
+    const dt = note.absMs - currentMs;
+
+    if (!note.hit && dt <= 0 && dt > -HIT_WINDOW_MS) {
+      note.hit = true;
+      state.hitCount++;
+      els.hitCountDisplay.textContent = state.hitCount;
+      triggerPulse();
+      playKick();
+    }
+
+    if (dt > TRAVEL_MS) continue;
+    if (dt < -DESPAWN_MS) continue;
+
+    const progress = 1 - (dt / TRAVEL_MS);
+    const x = judgmentX + (w - judgmentX) * (1 - progress);
+    drawNote(x, noteY, note.hit, dt);
+  }
+
+  if (els.audio.ended) {
+    stopPlayback();
+    return;
+  }
+
+  state.rafId = requestAnimationFrame(loop);
+}
+
+// ============================================================
+// Draw functions
+// ============================================================
+function drawJudgmentLine(x, y, half) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(255, 51, 102, 0.9)';
+  ctx.shadowBlur = 14;
+
+  ctx.strokeStyle = '#ff3366';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x, y - half);
+  ctx.lineTo(x, y + half);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ff3366';
+  ctx.beginPath();
+  ctx.arc(x, y - half, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x, y + half, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawNote(x, y, hit, dt) {
+  const radius = 18;
+
+  if (hit) {
+    const fade = Math.max(0, 1 + dt / DESPAWN_MS);
+    const burstScale = 1 + fade * 1.8;
+
+    ctx.globalAlpha = fade;
+
+    const grd = ctx.createRadialGradient(x, y, 0, x, y, radius * burstScale * 3);
+    grd.addColorStop(0, 'rgba(255, 50, 110, 0.85)');
+    grd.addColorStop(0.5, 'rgba(255, 50, 110, 0.3)');
+    grd.addColorStop(1, 'rgba(255, 50, 110, 0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * burstScale * 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ff3270';
+    ctx.beginPath();
+    ctx.arc(x, y, radius * burstScale, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = fade * fade;
+    ctx.fillStyle = 'rgba(255, 220, 235, 1)';
+    ctx.beginPath();
+    ctx.arc(x, y, radius * burstScale * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  // グロー
+  const grd = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
+  grd.addColorStop(0, 'rgba(255, 204, 0, 0.6)');
+  grd.addColorStop(1, 'rgba(255, 204, 0, 0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 本体
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ハイライト
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.beginPath();
+  ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawRecordedBeat(x, y, dt) {
+  const radius = 18;
+
+  // Glow effect for recorded beats (green)
+  const grd = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
+  grd.addColorStop(0, 'rgba(0, 229, 255, 0.6)');
+  grd.addColorStop(1, 'rgba(0, 229, 255, 0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main body (cyan)
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Highlight
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.beginPath();
+  ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function triggerPulse() {
+  els.pulse.classList.remove('active');
+  void els.pulse.offsetWidth;
+  els.pulse.classList.add('active');
+}
+
+// ============================================================
+// サンプル譜面
+// ============================================================
+els.sampleBtn.addEventListener('click', () => {
+  const sample = {
+    version: "1.0",
+    meta: { title: "サンプル", author: "demo", createdAt: new Date().toISOString() },
+    media: { video: "", audio: "", videoOffsetMs: 0 },
+    timing: { bpm: 120, offsetMs: 500, stepsPerBeat: 4 },
+    patterns: {
+      basic: {
+        name: "基本",
+        lengthInBeats: 16,
+        notes: [
+          { step: 0 }, { step: 4 }, { step: 8 }, { step: 12 },
+          { step: 16 }, { step: 20 }, { step: 24 }, { step: 28 },
+          { step: 32 }, { step: 36 }, { step: 40 }, { step: 44 },
+          { step: 48 }, { step: 52 }, { step: 56 }, { step: 60 },
+        ]
+      },
+      double: {
+        name: "倍速",
+        lengthInBeats: 16,
+        notes: Array.from({ length: 32 }, (_, i) => ({ step: i * 2 }))
+      }
+    },
+    timeline: [
+      { patternId: "basic", repeat: 2 },
+      { patternId: "double", repeat: 1 },
+      { patternId: "basic", repeat: 1 }
+    ]
+  };
+  applyChart(sample);
+  els.chartInfo.textContent = "サンプル譜面（読み込み済み）";
+});
+
+// ============================================================
+// シアターモード切り替え
+// ============================================================
+$('viewToggle').addEventListener('click', () => {
+  const minimal = document.body.classList.toggle('minimal');
+  $('viewToggle').textContent = minimal ? '⊞ UI表示' : '⊟ シアター';
+});
+
+// ============================================================
+// キーボードショートカット
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  const tag = document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    // In edit mode, record beats instead of play/pause
+    if (state.editMode && state.isPlaying) {
+      recordBeat();
+    } else if (!els.playBtn.disabled) {
+      els.playBtn.click();
+    }
+  } else if (e.code === 'ArrowUp') {
+    e.preventDefault();
+    const vol = Math.min(100, parseInt(els.volumeSlider.value) + 10);
+    els.volumeSlider.value = vol;
+    els.audio.volume = vol / 100;
+  } else if (e.code === 'ArrowDown') {
+    e.preventDefault();
+    const vol = Math.max(0, parseInt(els.volumeSlider.value) - 10);
+    els.volumeSlider.value = vol;
+    els.audio.volume = vol / 100;
+  } else if (e.code === 'Comma') {
+    e.preventDefault();
+    seekToBeginning();
+  } else if (e.code === 'Enter' && e.ctrlKey) {
+    e.preventDefault();
+    $('viewToggle').click();
+  }
+});
+
+// ============================================================
+// Init
+// ============================================================
+resizeCanvas();
+</script>
+
+</body>
+</html>
