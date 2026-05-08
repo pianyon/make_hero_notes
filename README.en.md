@@ -12,9 +12,14 @@ A **Guitar Hero-style rhythm chart editor and player** that runs entirely in you
 - 📦 **JSON-based charts** — easy to share, version, or back up
 - 🌐 **100% client-side** — files are processed locally, never uploaded anywhere
 - ⌨️ **Keyboard shortcuts** for fast workflow
+- 🎯 **Dynamic editing mode** — record beats in real-time by tapping spacebar on rhythm
+- 💾 **Auto-save** — localStorage persistence prevents data loss
+- 🔄 **Video loop** — video automatically loops when shorter than audio
+- ⚡ **Video speed control** — adjust playback speed from 0.1x to 4.0x
 
 ## Quick Start
 
+### Option 1: Create charts with the editor
 1. Clone or download this repository
    ```bash
    git clone https://github.com/pianyon/make_hero_notes.git
@@ -22,6 +27,14 @@ A **Guitar Hero-style rhythm chart editor and player** that runs entirely in you
 2. Open `editor.html` in your browser to create a chart
 3. Click **Export JSON** to save your chart
 4. Open `index.html`, load your chart JSON + audio + (optional) video, and play
+
+### Option 2: Record beats in real-time (NEW!)
+1. Open `index.html` in your browser
+2. Load your audio file (and optional video)
+3. Click **🎯 Edit Mode** button
+4. Click **▶ Play** and tap **Spacebar** on the rhythm
+5. Click **💾 Export** to save your beatmap as JSON
+6. Disable Edit Mode to play back your creation
 
 For a full walkthrough, open `help.html` in your browser.
 
@@ -36,10 +49,14 @@ For a full walkthrough, open `help.html` in your browser.
 ## Keyboard Shortcuts
 
 ### Player
-- `Space` — Play / pause
+- `Space` — Play / pause (or record beat in Edit Mode)
 - `↑` / `↓` — Volume up / down
 - `,` — Rewind to start
 - `Ctrl + Enter` — Toggle theater mode
+
+### Player (Edit Mode)
+- `Space` — Record beat on rhythm (during playback)
+- `Space` — Play / pause (when not recording)
 
 ### Editor
 - `Space` — Preview play / pause
