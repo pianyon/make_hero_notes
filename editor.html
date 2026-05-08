@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rhythm Editor</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-panel: #14141c;
+    --bg-panel2: #1a1a26;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text-dim: #888899;
+    --accent: #00e5ff;
+    --note: #ffcc00;
+    --judgment: #ff3366;
+    --danger: #ff4455;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: 'SF Mono','Menlo','Consolas',monospace; font-size: 12px;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ── Top bar ─────────────────────────────────── */
+  .top-bar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 8px 16px; background: var(--bg-panel);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .top-bar h1 {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.15em;
+    color: var(--accent); text-transform: uppercase; white-space: nowrap;
+  }
+  .meta-fields { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .meta-field { display: flex; flex-direction: column; gap: 2px; }
+  .meta-field label {
+    font-size: 9px; color: var(--text-dim);
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .meta-field input, .meta-field select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    padding: 4px 6px; font-family: inherit; font-size: 12px; border-radius: 2px;
+  }
+  .meta-field input:focus, .meta-field select:focus { outline: none; border-color: var(--accent); }
+  #metaTitle  { width: 150px; }
+  #metaBpm    { width: 72px; }
+  #metaOffset { width: 80px; }
+  #metaSpb    { width: 130px; }
+  #importFile { display: none; }
+  .spacer { flex: 1; }
+  .top-actions { display: flex; gap: 6px; align-items: center; }
+  .nav-link {
+    color: var(--text-dim); font-size: 11px; letter-spacing: 0.1em;
+    text-decoration: none; border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 2px;
+    font-family: inherit; font-weight: 600; text-transform: uppercase;
+    transition: color 0.12s, border-color 0.12s; white-space: nowrap;
+  }
+  .nav-link:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ── Buttons ─────────────────────────────────── */
+  button {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+    padding: 5px 12px; font-family: inherit; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+    border-radius: 2px; transition: all 0.12s; white-space: nowrap;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  button.primary:hover { background: #fff; }
+
+  /* ── Main area ───────────────────────────────── */
+  .main-area { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+  /* ── Pool panel ──────────────────────────────── */
+  .pool-panel {
+    width: 200px; flex-shrink: 0; display: flex; flex-direction: column;
+    border-right: 1px solid var(--border); background: var(--bg-panel);
+  }
+  .panel-header {
+    padding: 6px 12px; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .panel-header .hint {
+    font-weight: 400; font-size: 9px; color: #444458;
+    text-transform: none; letter-spacing: 0;
+  }
+  .pool-list {
+    flex: 1; overflow-y: auto; padding: 8px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .pattern-card {
+    display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 2px;
+    cursor: grab; user-select: none; transition: border-color 0.1s;
+  }
+  .pattern-card:hover { border-color: #3a3a4e; }
+  .pattern-card.selected { border-color: var(--accent); background: rgba(0,229,255,0.05); }
+  .pattern-card.dragging { opacity: 0.35; }
+  .card-name-input {
+    flex: 1; background: transparent; border: none;
+    border-bottom: 1px solid transparent; color: var(--text);
+    font-family: inherit; font-size: 12px; outline: none; padding: 0;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: border-color 0.1s;
+  }
+  .card-name-input:hover { border-bottom-color: #444458; }
+  .card-name-input:focus { border-bottom-color: var(--accent); }
+  .card-count { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
+  .card-del {
+    flex-shrink: 0; background: none; border: none; color: #555568;
+    font-size: 15px; padding: 0 2px; cursor: pointer; line-height: 1;
+    text-transform: none; letter-spacing: 0; transition: color 0.1s;
+  }
+  .card-del:hover { color: var(--danger); border: none; }
+  .pool-footer { padding: 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .pool-footer button { width: 100%; }
+
+  /* ── Right panel ─────────────────────────────── */
+  .right-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+  /* ── Timeline ────────────────────────────────── */
+  .timeline-panel { flex-shrink: 0; border-bottom: 1px solid var(--border); }
+  .timeline-track {
+    display: flex; align-items: center; gap: 4px;
+    padding: 8px 12px; min-height: 68px; overflow-x: auto; overflow-y: hidden;
+  }
+  .tl-block {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    height: 48px; background: var(--bg-panel2); border: 1px solid var(--border);
+    border-radius: 3px; padding: 0 8px; cursor: grab; user-select: none;
+    transition: border-color 0.1s;
+  }
+  .tl-block:hover { border-color: #3a3a4e; }
+  .tl-block.insert-before { border-left: 3px solid var(--accent); }
+  .tl-name { font-size: 11px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  .tl-repeat { display: flex; align-items: center; gap: 2px; font-size: 11px; color: var(--text-dim); }
+  .tl-repeat input {
+    width: 34px; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-family: inherit; font-size: 11px;
+    padding: 2px 4px; text-align: center; border-radius: 2px;
+  }
+  .tl-del {
+    margin-left: 2px; background: none; border: none; color: #555568;
+    font-size: 14px; padding: 0; cursor: pointer; line-height: 1;
+    text-transform: none; letter-spacing: 0; transition: color 0.1s;
+  }
+  .tl-del:hover { color: var(--danger); border: none; }
+  .tl-end-zone {
+    flex: 1; min-width: 80px; height: 48px;
+    border: 2px dashed #252535; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    color: #333345; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .tl-end-zone.drag-over { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Sequencer ───────────────────────────────── */
+  .sequencer-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+  .sequencer-scroll { flex: 1; overflow: auto; padding: 14px; }
+  .seq-empty { color: var(--text-dim); padding: 20px 0; }
+  .seq-grid { display: flex; gap: 12px; width: fit-content; }
+  .beat-col { display: flex; flex-direction: column; gap: 4px; }
+  .beat-num { text-align: left; font-size: 10px; color: var(--text-dim); padding-bottom: 2px; }
+  .beat-steps { display: flex; gap: 2px; }
+  .step-cell {
+    width: 22px; height: 38px; background: #161620; border: 1px solid #222230;
+    border-radius: 2px; cursor: pointer; transition: background 0.08s; flex-shrink: 0;
+  }
+  .step-cell:hover { background: #22223a; }
+  .step-cell.active { background: var(--note); border-color: #e6b800; }
+  .step-cell.active:hover { background: #ffe040; }
+  /* 偶数拍の背景を変えて4step区切りを強調 */
+  .beat-col:nth-child(even) .step-cell:not(.active) { background: #1d1d2c; }
+  .beat-col:nth-child(even) .step-cell:hover { background: #26263c; }
+
+  /* ── Preview ─────────────────────────────────── */
+  .preview-panel {
+    flex-shrink: 0; height: 120px; border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; background: var(--bg-panel);
+  }
+  .preview-canvas-wrap { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+  #previewCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .preview-controls {
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+    border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .preview-controls input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+  .time-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; min-width: 130px; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>◆ Rhythm Editor</h1>
+  <div class="meta-fields">
+    <div class="meta-field">
+      <label>Title</label>
+      <input id="metaTitle" placeholder="タイトル" value="新規譜面">
+    </div>
+    <div class="meta-field">
+      <label>BPM</label>
+      <input id="metaBpm" type="number" value="120" min="1" max="999" step="0.01">
+    </div>
+    <div class="meta-field">
+      <label>Offset (ms)</label>
+      <input id="metaOffset" type="number" value="0" step="10">
+    </div>
+    <div class="meta-field">
+      <label>Grid</label>
+      <select id="metaSpb">
+        <option value="1">4分音符 (×1)</option>
+        <option value="2">8分音符 (×2)</option>
+        <option value="4" selected>16分音符 (×4)</option>
+        <option value="8">32分音符 (×8)</option>
+      </select>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="top-actions">
+    <a href="index.html" class="nav-link">← Player</a>
+    <a href="help.html" class="nav-link">? Help</a>
+    <button id="importBtn">Import JSON</button>
+    <button class="primary" id="exportBtn">Export JSON</button>
+    <input type="file" id="importFile" accept=".json">
+  </div>
+</div>
+
+<div class="main-area">
+  <div class="pool-panel">
+    <div class="panel-header">Patterns</div>
+    <div class="pool-list" id="poolList"></div>
+    <div class="pool-footer">
+      <button id="addPatternBtn">+ New Pattern</button>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="timeline-panel">
+      <div class="panel-header">
+        Timeline
+        <span class="hint">— Pool からドラッグして追加 / ブロックをドラッグで並び替え</span>
+      </div>
+      <div class="timeline-track" id="timelineTrack"></div>
+    </div>
+    <div class="sequencer-panel">
+      <div class="panel-header" id="seqTitle">Step Sequencer — パターンを選択してください</div>
+      <div class="sequencer-scroll">
+        <div id="seqGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="preview-panel">
+  <div class="preview-canvas-wrap">
+    <canvas id="previewCanvas"></canvas>
+  </div>
+  <div class="preview-controls">
+    <button id="prevRewindBtn">|◀</button>
+    <button id="prevPlayBtn" disabled>▶ Play</button>
+    <button id="metroBtn">♩ Click: ON</button>
+    <input type="range" id="seekBar" min="0" max="10000" value="0" step="1">
+    <span class="time-label" id="timeLabel">0.000 / 0.000 s</span>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ============================================================
+// Constants
+// ============================================================
+const TRAVEL_MS     = 2000;
+const LEAD_IN_MS    = 1000;
+const HIT_WINDOW_MS = 50;   // ヒット判定ウィンドウ (ms)
+const DESPAWN_MS    = 350;  // ヒット後のノーツ消滅猶予 (ms)
+
+// ============================================================
+// State
+// ============================================================
+let patternCounter = 0;
+let selectedPatternId = null;
+let paintMode = null; // 'paint' | 'erase'
+let metronomeEnabled = true;
+let audioCtx = null;
+let timelineUndo = null;
+
+const chart = {
+  version: '1.0',
+  meta: { title: '新規譜面', author: '', createdAt: new Date().toISOString() },
+  media: { video: '', audio: '', videoOffsetMs: 0 },
+  timing: { bpm: 120, offsetMs: 0, stepsPerBeat: 4 },
+  patterns: {},
+  timeline: [],
+};
+
+const drag = { source: null };
+
+const preview = {
+  isPlaying: false,
+  currentMs: 0,
+  lastTimestamp: null,
+  rafId: null,
+  noteEvents: [],
+  totalMs: 0,
+  kickIndex: 0,
+};
+
+// ============================================================
+// DOM refs
+// ============================================================
+const $ = id => document.getElementById(id);
+const els = {
+  poolList:      $('poolList'),
+  timelineTrack: $('timelineTrack'),
+  seqGrid:       $('seqGrid'),
+  seqTitle:      $('seqTitle'),
+  addPatternBtn: $('addPatternBtn'),
+  importBtn:     $('importBtn'),
+  importFile:    $('importFile'),
+  exportBtn:     $('exportBtn'),
+  metaTitle:     $('metaTitle'),
+  metaBpm:       $('metaBpm'),
+  metaOffset:    $('metaOffset'),
+  metaSpb:       $('metaSpb'),
+  prevPlayBtn:   $('prevPlayBtn'),
+  prevRewindBtn: $('prevRewindBtn'),
+  metroBtn:      $('metroBtn'),
+  seekBar:       $('seekBar'),
+  timeLabel:     $('timeLabel'),
+  previewCanvas: $('previewCanvas'),
+};
+
+const pCtx = els.previewCanvas.getContext('2d');
+
+// ============================================================
+// Utilities
+// ============================================================
+function stopBubble(el, ...events) {
+  events.forEach(ev => el.addEventListener(ev, e => e.stopPropagation()));
+}
+
+function syncPatternNameDisplays(id, name) {
+  els.timelineTrack.querySelectorAll('.tl-block').forEach(block => {
+    if (chart.timeline[parseInt(block.dataset.index)]?.patternId === id) {
+      const nameEl = block.querySelector('.tl-name');
+      if (nameEl) nameEl.textContent = name;
+    }
+  });
+  if (selectedPatternId === id) {
+    els.seqTitle.textContent = 'Step Sequencer — ' + (name || id);
+  }
+}
+
+function saveTimelineUndo() {
+  timelineUndo = chart.timeline.map(e => ({ ...e }));
+}
+
+// ============================================================
+// Pattern CRUD
+// ============================================================
+function newPatternId() { return 'p' + (++patternCounter); }
+
+function addPattern() {
+  const id = newPatternId();
+  chart.patterns[id] = { name: 'Pattern ' + patternCounter, lengthInBeats: 8, notes: [] };
+  selectPattern(id);
+  renderPool();
+  return id;
+}
+
+function deletePattern(id) {
+  delete chart.patterns[id];
+  chart.timeline = chart.timeline.filter(e => e.patternId !== id);
+  const ids = Object.keys(chart.patterns);
+  if (selectedPatternId === id) selectPattern(ids.length ? ids[ids.length - 1] : null);
+  renderPool();
+  renderTimeline();
+  rebuildPreviewEvents();
+}
+
+function selectPattern(id) {
+  selectedPatternId = id;
+  els.poolList.querySelectorAll('.pattern-card').forEach(card => {
+    card.classList.toggle('selected', card.dataset.id === id);
+  });
+  renderSequencer();
+}
+
+function toggleNote(patternId, step) {
+  const pattern = chart.patterns[patternId];
+  if (!pattern) return;
+  const idx = pattern.notes.findIndex(n => n.step === step);
+  const nowActive = idx < 0;
+  if (nowActive) {
+    pattern.notes.push({ step });
+    pattern.notes.sort((a, b) => a.step - b.step);
+  } else {
+    pattern.notes.splice(idx, 1);
+  }
+  // Update only the affected cell to preserve paint drag continuity
+  const cell = els.seqGrid.querySelector(`[data-step="${step}"]`);
+  if (cell) cell.classList.toggle('active', nowActive);
+  // Update note count badge
+  const countEl = els.poolList.querySelector(`[data-id="${patternId}"] .card-count`);
+  if (countEl) countEl.textContent = pattern.notes.length || '';
+  rebuildPreviewEvents();
+}
+
+// ============================================================
+// Preview events
+// ============================================================
+function rebuildPreviewEvents() {
+  const { bpm, offsetMs, stepsPerBeat } = chart.timing;
+  const msPerStep = 60000 / bpm / stepsPerBeat;
+  const events = [];
+  let cursorBeats = 0;
+
+  for (const entry of chart.timeline) {
+    const pattern = chart.patterns[entry.patternId];
+    if (!pattern) continue;
+    const repeat = entry.repeat || 1;
+    for (let r = 0; r < repeat; r++) {
+      for (const note of pattern.notes) {
+        const absMs = LEAD_IN_MS + offsetMs + (cursorBeats * stepsPerBeat + note.step) * msPerStep;
+        events.push({ absMs, hit: false });
+      }
+      cursorBeats += pattern.lengthInBeats;
+    }
+  }
+  events.sort((a, b) => a.absMs - b.absMs);
+  preview.noteEvents = events;
+  preview.totalMs = events.length ? events[events.length - 1].absMs + TRAVEL_MS : 0;
+  els.seekBar.max = Math.max(preview.totalMs, 1);
+  els.prevPlayBtn.disabled = preview.totalMs === 0;
+  updateTimeLabel();
+}
+
+// ============================================================
+// Render: Pool
+// ============================================================
+function createPatternCard(id, pattern) {
+  const card = document.createElement('div');
+  card.className = 'pattern-card' + (id === selectedPatternId ? ' selected' : '');
+  card.draggable = true;
+  card.dataset.id = id;
+
+  const nameInput = document.createElement('input');
+  nameInput.className = 'card-name-input';
+  nameInput.value = pattern.name;
+  nameInput.placeholder = 'Pattern name';
+  stopBubble(nameInput, 'mousedown');
+  nameInput.addEventListener('input', () => {
+    chart.patterns[id].name = nameInput.value;
+    syncPatternNameDisplays(id, nameInput.value);
+  });
+
+  const countSpan = document.createElement('span');
+  countSpan.className = 'card-count';
+  countSpan.textContent = pattern.notes.length || '';
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'card-del';
+  delBtn.textContent = '×';
+  delBtn.title = '削除';
+  delBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (confirm(`"${pattern.name}" を削除しますか？`)) deletePattern(id);
+  });
+
+  card.appendChild(nameInput);
+  card.appendChild(countSpan);
+  card.appendChild(delBtn);
+  card.addEventListener('click', () => selectPattern(id));
+  card.addEventListener('dragstart', (e) => {
+    drag.source = { type: 'pool', patternId: id };
+    e.dataTransfer.effectAllowed = 'copy';
+    requestAnimationFrame(() => card.classList.add('dragging'));
+  });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+
+  return card;
+}
+
+function renderPool() {
+  els.poolList.replaceChildren(
+    ...Object.entries(chart.patterns).map(([id, pattern]) => createPatternCard(id, pattern))
+  );
+}
+
+// ============================================================
+// Render: Timeline
+// ============================================================
+function createTimelineBlock(entry, i) {
+  const pattern = chart.patterns[entry.patternId];
+  if (!pattern) return null;
+
+  const block = document.createElement('div');
+  block.className = 'tl-block';
+  block.draggable = true;
+  block.dataset.index = i;
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'tl-name';
+  nameEl.textContent = pattern.name;
+
+  const repeatWrap = document.createElement('span');
+  repeatWrap.className = 'tl-repeat';
+
+  const repeatInput = document.createElement('input');
+  repeatInput.type = 'number';
+  repeatInput.min = 1;
+  repeatInput.max = 99;
+  repeatInput.value = entry.repeat || 1;
+  repeatInput.addEventListener('change', () => {
+    entry.repeat = Math.max(1, parseInt(repeatInput.value) || 1);
+    repeatInput.value = entry.repeat;
+    rebuildPreviewEvents();
+  });
+  stopBubble(repeatInput, 'click', 'mousedown');
+
+  repeatWrap.appendChild(document.createTextNode('×'));
+  repeatWrap.appendChild(repeatInput);
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'tl-del';
+  delBtn.textContent = '×';
+  delBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    saveTimelineUndo();
+    chart.timeline.splice(i, 1);
+    renderTimeline();
+    rebuildPreviewEvents();
+  });
+
+  block.appendChild(nameEl);
+  block.appendChild(repeatWrap);
+  block.appendChild(delBtn);
+  block.addEventListener('dragstart', (e) => {
+    drag.source = { type: 'timeline', index: i };
+    e.dataTransfer.effectAllowed = 'move';
+    e.stopPropagation();
+  });
+  block.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    clearInsertMarkers();
+    block.classList.add('insert-before');
+  });
+  block.addEventListener('dragleave', () => block.classList.remove('insert-before'));
+  block.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleTimelineDrop(i);
+  });
+
+  return block;
+}
+
+function createTimelineEndZone() {
+  const endZone = document.createElement('div');
+  endZone.className = 'tl-end-zone';
+  endZone.textContent = chart.timeline.length ? '+ ここにドロップ' : 'Pool からパターンをドラッグ';
+  endZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    clearInsertMarkers();
+    endZone.classList.add('drag-over');
+  });
+  endZone.addEventListener('dragleave', () => endZone.classList.remove('drag-over'));
+  endZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    endZone.classList.remove('drag-over');
+    handleTimelineDrop(chart.timeline.length);
+  });
+  return endZone;
+}
+
+function renderTimeline() {
+  const blocks = chart.timeline.map((entry, i) => createTimelineBlock(entry, i)).filter(Boolean);
+  els.timelineTrack.replaceChildren(...blocks, createTimelineEndZone());
+}
+
+function clearInsertMarkers() {
+  els.timelineTrack.querySelectorAll('.insert-before').forEach(el => el.classList.remove('insert-before'));
+}
+
+function handleTimelineDrop(insertIndex) {
+  if (!drag.source) return;
+  clearInsertMarkers();
+  saveTimelineUndo();
+
+  if (drag.source.type === 'pool') {
+    chart.timeline.splice(insertIndex, 0, { patternId: drag.source.patternId, repeat: 1 });
+  } else if (drag.source.type === 'timeline') {
+    const from = drag.source.index;
+    if (from === insertIndex || from + 1 === insertIndex) { drag.source = null; return; }
+    const [entry] = chart.timeline.splice(from, 1);
+    const adj = insertIndex > from ? insertIndex - 1 : insertIndex;
+    chart.timeline.splice(adj, 0, entry);
+  }
+
+  drag.source = null;
+  renderTimeline();
+  rebuildPreviewEvents();
+}
+
+// ============================================================
+// Render: Sequencer
+// ============================================================
+function createBeatColumn(beat, spb, activeSteps) {
+  const col = document.createElement('div');
+  col.className = 'beat-col';
+
+  const beatNum = document.createElement('div');
+  beatNum.className = 'beat-num';
+  beatNum.textContent = beat + 1;
+
+  const stepsRow = document.createElement('div');
+  stepsRow.className = 'beat-steps';
+
+  for (let s = 0; s < spb; s++) {
+    const step = beat * spb + s;
+    const cell = document.createElement('div');
+    cell.className = 'step-cell' + (activeSteps.has(step) ? ' active' : '');
+    cell.dataset.step = step;
+
+    cell.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const hasNote = chart.patterns[selectedPatternId]?.notes.some(n => n.step === step);
+      paintMode = hasNote ? 'erase' : 'paint';
+      toggleNote(selectedPatternId, step);
+    });
+    cell.addEventListener('mouseenter', () => {
+      if (!paintMode || !selectedPatternId) return;
+      const hasNote = chart.patterns[selectedPatternId]?.notes.some(n => n.step === step);
+      if (paintMode === 'paint' && !hasNote) toggleNote(selectedPatternId, step);
+      if (paintMode === 'erase' && hasNote) toggleNote(selectedPatternId, step);
+    });
+
+    stepsRow.appendChild(cell);
+  }
+
+  col.appendChild(beatNum);
+  col.appendChild(stepsRow);
+  return col;
+}
+
+function renderSequencer() {
+  const pattern = chart.patterns[selectedPatternId];
+  if (!pattern) {
+    els.seqTitle.textContent = 'Step Sequencer — パターンを選択してください';
+    const empty = document.createElement('p');
+    empty.className = 'seq-empty';
+    empty.textContent = '← Pool でパターンを選択してください';
+    els.seqGrid.replaceChildren(empty);
+    return;
+  }
+
+  els.seqTitle.textContent = 'Step Sequencer — ' + pattern.name;
+  const spb = chart.timing.stepsPerBeat;
+  const activeSteps = new Set(pattern.notes.map(n => n.step));
+
+  const grid = document.createElement('div');
+  grid.className = 'seq-grid';
+  for (let beat = 0; beat < pattern.lengthInBeats; beat++) {
+    grid.appendChild(createBeatColumn(beat, spb, activeSteps));
+  }
+  els.seqGrid.replaceChildren(grid);
+}
+
+document.addEventListener('mouseup', () => { paintMode = null; });
+
+// ============================================================
+// Metronome (Web Audio API)
+// ============================================================
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new AudioContext();
+  return audioCtx;
+}
+
+function playKick() {
+  const actx = getAudioCtx();
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  osc.connect(gain);
+  gain.connect(actx.destination);
+  osc.type = 'sine';
+  const t = actx.currentTime;
+  osc.frequency.setValueAtTime(150, t);
+  osc.frequency.exponentialRampToValueAtTime(40, t + 0.06);
+  gain.gain.setValueAtTime(0.9, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+  osc.start(t);
+  osc.stop(t + 0.25);
+}
+
+function playClick(accent = false) {
+  const actx = getAudioCtx();
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  osc.connect(gain);
+  gain.connect(actx.destination);
+  osc.type = 'sine';
+  osc.frequency.value = accent ? 1320 : 880;
+  gain.gain.setValueAtTime(accent ? 0.5 : 0.28, actx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.045);
+  osc.start(actx.currentTime);
+  osc.stop(actx.currentTime + 0.045);
+}
+
+// ============================================================
+// Preview: Canvas resize
+// ============================================================
+function resizePreviewCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = els.previewCanvas.getBoundingClientRect();
+  els.previewCanvas.width = rect.width * dpr;
+  els.previewCanvas.height = rect.height * dpr;
+  pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+new ResizeObserver(resizePreviewCanvas).observe(els.previewCanvas);
+
+// ============================================================
+// Preview: Render frame
+// ============================================================
+function renderPreviewFrame() {
+  const w = els.previewCanvas.clientWidth;
+  const h = els.previewCanvas.clientHeight;
+  const cx = w / 2;
+  const cy = h / 2;
+  const half = Math.min(h * 0.42, 28);
+  const cur = preview.currentMs;
+
+  pCtx.clearRect(0, 0, w, h);
+
+  // Background strip
+  pCtx.fillStyle = 'rgba(0,0,0,0.5)';
+  pCtx.fillRect(0, cy - half, w, half * 2);
+
+  // Center guide
+  pCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+  pCtx.lineWidth = 1;
+  pCtx.beginPath(); pCtx.moveTo(0, cy); pCtx.lineTo(w, cy); pCtx.stroke();
+
+  // Judgment line
+  pCtx.save();
+  pCtx.shadowColor = 'rgba(255,51,102,0.9)';
+  pCtx.shadowBlur = 12;
+  pCtx.strokeStyle = '#ff3366';
+  pCtx.lineWidth = 2;
+  pCtx.beginPath(); pCtx.moveTo(cx, cy - half); pCtx.lineTo(cx, cy + half); pCtx.stroke();
+  pCtx.fillStyle = '#ff3366';
+  for (const y of [cy - half, cy + half]) {
+    pCtx.beginPath(); pCtx.arc(cx, y, 5, 0, Math.PI * 2); pCtx.fill();
+  }
+  pCtx.restore();
+
+  // Notes
+  for (const note of preview.noteEvents) {
+    const dt = note.absMs - cur;
+    if (!note.hit && dt <= 0 && dt > -HIT_WINDOW_MS) note.hit = true;
+    if (dt > TRAVEL_MS || dt < -DESPAWN_MS) continue;
+    const x = cx + (w - cx) * (dt / TRAVEL_MS);
+    drawPNote(x, cy, note.hit, dt);
+  }
+}
+
+function drawPNote(x, y, hit, dt) {
+  const r = 13;
+  if (hit) {
+    const fade = Math.max(0, 1 + dt / DESPAWN_MS);
+    const sc = 1 + fade * 1.8;
+    pCtx.globalAlpha = fade;
+    const g = pCtx.createRadialGradient(x, y, 0, x, y, r * sc * 3);
+    g.addColorStop(0, 'rgba(255,50,110,0.85)');
+    g.addColorStop(1, 'rgba(255,50,110,0)');
+    pCtx.fillStyle = g;
+    pCtx.beginPath(); pCtx.arc(x, y, r * sc * 3, 0, Math.PI * 2); pCtx.fill();
+    pCtx.fillStyle = '#ff3270';
+    pCtx.beginPath(); pCtx.arc(x, y, r * sc, 0, Math.PI * 2); pCtx.fill();
+    pCtx.globalAlpha = 1;
+    return;
+  }
+  const g = pCtx.createRadialGradient(x, y, 0, x, y, r * 2);
+  g.addColorStop(0, 'rgba(255,204,0,0.6)');
+  g.addColorStop(1, 'rgba(255,204,0,0)');
+  pCtx.fillStyle = g;
+  pCtx.beginPath(); pCtx.arc(x, y, r * 2, 0, Math.PI * 2); pCtx.fill();
+  pCtx.fillStyle = '#ffcc00';
+  pCtx.beginPath(); pCtx.arc(x, y, r, 0, Math.PI * 2); pCtx.fill();
+  pCtx.fillStyle = 'rgba(255,255,255,0.45)';
+  pCtx.beginPath(); pCtx.arc(x - r * 0.3, y - r * 0.3, r * 0.35, 0, Math.PI * 2); pCtx.fill();
+}
+
+// ============================================================
+// Preview: Playback
+// ============================================================
+function previewLoop(ts) {
+  if (!preview.isPlaying) return;
+  const delta = ts - preview.lastTimestamp;
+  preview.lastTimestamp = ts;
+  const prevMs = preview.currentMs;
+  preview.currentMs = Math.min(preview.currentMs + delta, preview.totalMs);
+
+  // キック: ノーツ通過タイミングで発火
+  while (preview.kickIndex < preview.noteEvents.length) {
+    const note = preview.noteEvents[preview.kickIndex];
+    if (note.absMs > preview.currentMs) break;
+    if (note.absMs > prevMs) playKick();
+    preview.kickIndex++;
+  }
+
+  // メトロノーム: 四分音符境界を検出してクリック音を鳴らす
+  if (metronomeEnabled) {
+    const msPerBeat = 60000 / chart.timing.bpm;
+    const beatStart = LEAD_IN_MS + chart.timing.offsetMs;
+    if (preview.currentMs >= beatStart) {
+      const prevBeat = prevMs < beatStart ? -1 : Math.floor((prevMs - beatStart) / msPerBeat);
+      const curBeat  = Math.floor((preview.currentMs - beatStart) / msPerBeat);
+      if (curBeat > prevBeat) playClick(curBeat % 4 === 0);
+    }
+  }
+
+  renderPreviewFrame();
+  els.seekBar.value = preview.currentMs;
+  updateTimeLabel();
+  if (preview.currentMs >= preview.totalMs) {
+    preview.isPlaying = false;
+    els.prevPlayBtn.textContent = '▶ Play';
+    return;
+  }
+  preview.rafId = requestAnimationFrame(previewLoop);
+}
+
+function startPreview() {
+  if (preview.totalMs === 0) return;
+  preview.isPlaying = true;
+  preview.lastTimestamp = performance.now();
+  els.prevPlayBtn.textContent = '⏸ Pause';
+  preview.rafId = requestAnimationFrame(previewLoop);
+}
+
+function pausePreview() {
+  preview.isPlaying = false;
+  if (preview.rafId) cancelAnimationFrame(preview.rafId);
+  els.prevPlayBtn.textContent = '▶ Play';
+}
+
+function rewindPreview() {
+  preview.currentMs = 0;
+  preview.kickIndex = 0;
+  preview.noteEvents.forEach(n => { n.hit = false; });
+  els.seekBar.value = 0;
+  updateTimeLabel();
+  renderPreviewFrame();
+}
+
+function updateTimeLabel() {
+  const c = (preview.currentMs / 1000).toFixed(3);
+  const t = (preview.totalMs / 1000).toFixed(3);
+  els.timeLabel.textContent = c + ' / ' + t + ' s';
+}
+
+// ============================================================
+// Meta field handlers
+// ============================================================
+els.metaTitle.addEventListener('input', () => { chart.meta.title = els.metaTitle.value; });
+els.metaBpm.addEventListener('input', () => {
+  const rawBpm = parseFloat(els.metaBpm.value);
+  chart.timing.bpm = rawBpm > 0 ? rawBpm : 120;
+  rebuildPreviewEvents();
+});
+els.metaOffset.addEventListener('input', () => {
+  const rawOffset = parseInt(els.metaOffset.value);
+  chart.timing.offsetMs = Number.isFinite(rawOffset) ? rawOffset : 0;
+  rebuildPreviewEvents();
+});
+els.metaSpb.addEventListener('change', () => {
+  const newSpb = parseInt(els.metaSpb.value);
+  const hasNotes = Object.values(chart.patterns).some(p => p.notes.length > 0);
+  if (hasNotes && !confirm('グリッドを変更するとすべてのノーツがクリアされます。続けますか？')) {
+    els.metaSpb.value = chart.timing.stepsPerBeat;
+    return;
+  }
+  Object.values(chart.patterns).forEach(p => { p.notes = []; });
+  chart.timing.stepsPerBeat = newSpb;
+  renderSequencer();
+  renderPool();
+  rebuildPreviewEvents();
+});
+
+// ============================================================
+// Button handlers
+// ============================================================
+els.addPatternBtn.addEventListener('click', addPattern);
+
+els.prevPlayBtn.addEventListener('click', () => {
+  if (preview.isPlaying) pausePreview(); else startPreview();
+});
+
+els.metroBtn.addEventListener('click', () => {
+  metronomeEnabled = !metronomeEnabled;
+  els.metroBtn.textContent = '♩ Click: ' + (metronomeEnabled ? 'ON' : 'OFF');
+  // AudioContext は最初のユーザー操作で初期化
+  if (metronomeEnabled) getAudioCtx();
+});
+
+els.prevRewindBtn.addEventListener('click', () => {
+  const was = preview.isPlaying;
+  pausePreview();
+  rewindPreview();
+  if (was) startPreview();
+});
+
+els.seekBar.addEventListener('input', () => {
+  preview.currentMs = parseInt(els.seekBar.value);
+  let firstFutureIdx = preview.noteEvents.length;
+  for (let i = 0; i < preview.noteEvents.length; i++) {
+    const n = preview.noteEvents[i];
+    if (n.absMs < preview.currentMs) {
+      n.hit = true;
+    } else {
+      n.hit = false;
+      if (firstFutureIdx === preview.noteEvents.length) firstFutureIdx = i;
+    }
+  }
+  preview.kickIndex = firstFutureIdx;
+  updateTimeLabel();
+  renderPreviewFrame();
+});
+
+// ============================================================
+// Keyboard shortcuts
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  const tag = document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!els.prevPlayBtn.disabled) els.prevPlayBtn.click();
+  } else if (e.code === 'Comma') {
+    e.preventDefault();
+    const was = preview.isPlaying;
+    pausePreview(); rewindPreview();
+    if (was) startPreview();
+  } else if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    if (timelineUndo !== null) {
+      chart.timeline = timelineUndo;
+      timelineUndo = null;
+      renderTimeline();
+      rebuildPreviewEvents();
+    }
+  }
+});
+
+// ============================================================
+// Import / Export
+// ============================================================
+els.importBtn.addEventListener('click', () => els.importFile.click());
+els.importFile.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try { loadChart(JSON.parse(await file.text())); }
+  catch (err) { alert('読み込みに失敗: ' + err.message); }
+  e.target.value = '';
+});
+
+els.exportBtn.addEventListener('click', () => {
+  chart.meta.title = els.metaTitle.value;
+  const blob = new Blob([JSON.stringify(chart, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (chart.meta.title || 'chart') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+function loadChart(json) {
+  if (!json.timing || !json.patterns || !Array.isArray(json.timeline)) {
+    throw new Error('Invalid chart: timing / patterns / timeline が見つかりません');
+  }
+  if (json.version && json.version !== '1.0') {
+    console.warn('Chart version mismatch: expected 1.0, got', json.version);
+  }
+
+  chart.version  = json.version ?? '1.0';
+  chart.meta     = { ...json.meta };
+  chart.media    = { ...json.media };
+  chart.timing   = { ...json.timing };
+  chart.patterns = { ...json.patterns };
+  chart.timeline = [...json.timeline];
+
+  patternCounter = 0;
+  for (const id of Object.keys(chart.patterns)) {
+    const n = parseInt(id.replace(/\D/g, ''));
+    if (!isNaN(n) && n > patternCounter) patternCounter = n;
+  }
+  els.metaTitle.value = chart.meta.title || '';
+  els.metaBpm.value = chart.timing.bpm;
+  els.metaOffset.value = chart.timing.offsetMs;
+  els.metaSpb.value = chart.timing.stepsPerBeat;
+  const ids = Object.keys(chart.patterns);
+  selectedPatternId = ids.length ? ids[0] : null;
+  renderPool();
+  renderTimeline();
+  renderSequencer();
+  rebuildPreviewEvents();
+  rewindPreview();
+}
+
+// ============================================================
+// Init
+// ============================================================
+addPattern();
+renderTimeline();
+rebuildPreviewEvents();
+resizePreviewCanvas();
+renderPreviewFrame();
+</script>
+</body>
+</html>
