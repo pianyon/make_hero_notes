@@ -337,8 +337,25 @@
     <input type="range" id="volumeSlider" min="0" max="100" value="100" style="width:80px;accent-color:var(--accent);">
   </div>
   <div class="control-group">
+    <label>Video Speed</label>
+    <input type="range" id="videoSpeedSlider" min="10" max="400" value="100" style="width:80px;accent-color:var(--accent);">
+    <span id="videoSpeedDisplay" style="font-size:10px;color:var(--text-dim);">1.0x</span>
+  </div>
+  <div class="control-group">
     <label>&nbsp;</label>
     <button class="secondary" id="sampleBtn">サンプル譜面ロード</button>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="editModeBtn">🎯 Edit Mode</button>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="clearBtn">🗑️ Clear</button>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="secondary" id="exportBtn" disabled>💾 Export</button>
   </div>
 </div>
 
@@ -381,6 +398,13 @@ const state = {
   isPaused: false,
   rafId: null,
   hitCount: 0,
+  editMode: false,
+  recordedBeats: [],
+  lastBeatTime: 0,
+  originalOffsetMs: 0, // Track original offset from loaded chart
+  countdownMode: false,
+  countdownValue: 0,
+  pauseTime: 0,
 };
 
 // ============================================================
@@ -400,7 +424,12 @@ const els = {
   playBtn: $('playBtn'),
   stopBtn: $('stopBtn'),
   volumeSlider: $('volumeSlider'),
+  videoSpeedSlider: $('videoSpeedSlider'),
+  videoSpeedDisplay: $('videoSpeedDisplay'),
   sampleBtn: $('sampleBtn'),
+  editModeBtn: $('editModeBtn'),
+  clearBtn: $('clearBtn'),
+  exportBtn: $('exportBtn'),
   video: $('video'),
   audio: $('audio'),
   videoPlaceholder: $('videoPlaceholder'),
@@ -479,7 +508,9 @@ els.chartFile.addEventListener('change', async (e) => {
   if (!file) return;
   try {
     const text = await file.text();
-    applyChart(JSON.parse(text));
+    const chart = JSON.parse(text);
+    console.log('Loading chart:', chart);
+    applyChart(chart);
     els.chartInfo.textContent = file.name;
   } catch (err) {
     console.error('譜面の読み込みに失敗:', err);
@@ -498,6 +529,43 @@ els.videoFile.addEventListener('change', (e) => {
   updatePlayability();
 });
 
+// ============================================================
+// Video Loop - Loop video when it ends but audio continues
+// ============================================================
+els.video.addEventListener('ended', () => {
+  console.log('Video ended event fired');
+  console.log('State:', {
+    isPlaying: state.isPlaying,
+    isPaused: state.isPaused,
+    audioEnded: els.audio.ended,
+    videoDuration: els.video.duration,
+    audioDuration: els.audio.duration
+  });
+
+  // Only loop if audio is still playing
+  if (state.isPlaying && !state.isPaused && !els.audio.ended) {
+    console.log('Video ended, looping...');
+    els.video.currentTime = 0;
+    els.video.play().catch(err => console.error('Video loop error:', err));
+  }
+});
+
+// ============================================================
+// Video Speed Control
+// ============================================================
+els.videoSpeedSlider.addEventListener('input', () => {
+  const speed = els.videoSpeedSlider.value / 100;
+  els.video.playbackRate = speed;
+  els.videoSpeedDisplay.textContent = speed.toFixed(1) + 'x';
+  console.log('Video speed set to:', speed);
+});
+
+els.audioFile.addEventListener('change', (e) => {
+  const speed = els.videoSpeedSlider.value / 100;
+  els.video.playbackRate = speed;
+  els.videoSpeedDisplay.textContent = speed.toFixed(1) + 'x';
+});
+
 els.audioFile.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -511,10 +579,311 @@ els.audioFile.addEventListener('change', (e) => {
 els.bpmOverride.addEventListener('change', () => { if (state.chart) applyChart(state.chart); });
 els.offsetOverride.addEventListener('change', () => { if (state.chart) applyChart(state.chart); });
 
+// ============================================================
+// Edit Mode Toggle
+// ============================================================
+els.editModeBtn.addEventListener('click', () => {
+  state.editMode = !state.editMode;
+  els.editModeBtn.textContent = state.editMode ? '🎯 Edit Mode ON' : '🎯 Edit Mode';
+  els.editModeBtn.style.background = state.editMode ? 'var(--accent)' : 'transparent';
+  els.editModeBtn.style.color = state.editMode ? 'var(--bg)' : 'var(--text)';
+
+  if (state.editMode) {
+    // If there's an existing chart, convert it to recorded beats for continuation
+    if (state.chart && state.noteEvents.length > 0) {
+      convertChartToRecordedBeats();
+    } else {
+      // Start fresh
+      state.recordedBeats = [];
+      state.lastBeatTime = 0;
+      state.originalOffsetMs = 0; // Track original offset
+      els.noteCountDisplay.textContent = '0';
+      els.hitCountDisplay.textContent = '0';
+      els.chartInfo.textContent = 'Recording Mode';
+    }
+
+    // Load saved beats from localStorage if available
+    loadFromLocalStorage();
+
+    // Enable export if we have beats
+    els.exportBtn.disabled = state.recordedBeats.length === 0;
+  } else {
+    // Convert recorded beats to chart format for playback
+    if (state.recordedBeats.length > 0) {
+      convertBeatsToChart();
+    }
+  }
+
+  // Update play button state
+  updatePlayability();
+});
+
+// ============================================================
+// Beat Recording (Spacebar)
+// ============================================================
+function recordBeat() {
+  if (!state.editMode || !state.isPlaying) return;
+
+  // Ignore beats during countdown
+  if (state.countdownMode) return;
+
+  const currentTime = els.audio.currentTime * 1000; // Convert to ms
+
+  // Prevent duplicate beats (minimum 100ms apart)
+  if (currentTime - state.lastBeatTime < 100) return;
+
+  state.lastBeatTime = currentTime;
+  state.recordedBeats.push(currentTime);
+
+  // Visual feedback
+  triggerPulse();
+  playKick();
+
+  // Update display
+  els.noteCountDisplay.textContent = state.recordedBeats.length;
+
+  // Save to localStorage
+  saveToLocalStorage();
+
+  // Enable export button
+  els.exportBtn.disabled = false;
+}
+
+// ============================================================
+// Convert Existing Chart to Recorded Beats
+// ============================================================
+function convertChartToRecordedBeats() {
+  if (!state.chart || !state.noteEvents || state.noteEvents.length === 0) return;
+
+  // Extract beat times from existing chart
+  state.recordedBeats = state.noteEvents.map(note => note.absMs);
+  state.lastBeatTime = state.recordedBeats.length > 0 ?
+    state.recordedBeats[state.recordedBeats.length - 1] : 0;
+
+  // Save the original offset from the chart
+  state.originalOffsetMs = state.chart.timing.offsetMs;
+
+  els.noteCountDisplay.textContent = state.recordedBeats.length;
+  els.chartInfo.textContent = `Continuing from ${state.recordedBeats.length} beats`;
+
+  // Save to localStorage
+  saveToLocalStorage();
+}
+
+// ============================================================
+// Convert Recorded Beats to Chart Format
+// ============================================================
+function convertBeatsToChart() {
+  if (state.recordedBeats.length === 0) return;
+
+  // Calculate BPM from recorded beats
+  const intervals = [];
+  for (let i = 1; i < state.recordedBeats.length; i++) {
+    intervals.push(state.recordedBeats[i] - state.recordedBeats[i - 1]);
+  }
+
+  // Find most common interval (mode)
+  const intervalCounts = {};
+  intervals.forEach(interval => {
+    const rounded = Math.round(interval / 10) * 10; // Round to nearest 10ms
+    intervalCounts[rounded] = (intervalCounts[rounded] || 0) + 1;
+  });
+
+  const mostCommonInterval = Object.entries(intervalCounts)
+    .sort((a, b) => b[1] - a[1])[0][0];
+
+  const estimatedBpm = 60000 / mostCommonInterval;
+
+  // Use original offset if available (when continuing from existing chart), otherwise use first beat
+  const offsetMs = state.originalOffsetMs !== undefined ? state.originalOffsetMs : state.recordedBeats[0];
+  const msPerStep = 60000 / estimatedBpm / 4; // 4 steps per beat
+
+  // Create chart
+  const chart = {
+    version: "1.0",
+    meta: {
+      title: "Recorded Beatmap",
+      author: "User",
+      createdAt: new Date().toISOString()
+    },
+    media: { video: "", audio: "", videoOffsetMs: 0 },
+    timing: {
+      bpm: Math.round(estimatedBpm * 100) / 100,
+      offsetMs: Math.round(offsetMs),
+      stepsPerBeat: 4
+    },
+    patterns: {
+      recorded: {
+        name: "Recorded",
+        lengthInBeats: Math.ceil((state.recordedBeats[state.recordedBeats.length - 1] - offsetMs) / (60000 / estimatedBpm)),
+        notes: state.recordedBeats.map((beatTime) => ({
+          step: Math.round((beatTime - offsetMs) / msPerStep)
+        }))
+      }
+    },
+    timeline: [
+      { patternId: "recorded", repeat: 1 }
+    ]
+  };
+
+  applyChart(chart);
+  els.chartInfo.textContent = 'Generated from recording';
+
+  console.log('Chart converted:', {
+    bpm: estimatedBpm.toFixed(2),
+    offsetMs: offsetMs,
+    noteCount: state.recordedBeats.length,
+    msPerStep: msPerStep.toFixed(2),
+    firstNoteStep: Math.round((state.recordedBeats[0] - offsetMs) / msPerStep),
+    lastNoteStep: Math.round((state.recordedBeats[state.recordedBeats.length - 1] - offsetMs) / msPerStep),
+    originalOffsetMs: state.originalOffsetMs
+  });
+}
+
+// ============================================================
+// Export Chart
+// ============================================================
+els.exportBtn.addEventListener('click', () => {
+  if (!state.chart && state.recordedBeats.length === 0) return;
+
+  // If in edit mode, convert beats first
+  if (state.editMode && state.recordedBeats.length > 0) {
+    convertBeatsToChart();
+  }
+
+  if (!state.chart) return;
+
+  const dataStr = JSON.stringify(state.chart, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `beatmap_${Date.now()}.json`;
+  link.click();
+
+  URL.revokeObjectURL(url);
+});
+
+// ============================================================
+// LocalStorage Persistence
+// ============================================================
+function saveToLocalStorage() {
+  const data = {
+    recordedBeats: state.recordedBeats,
+    timestamp: Date.now()
+  };
+  localStorage.setItem('hero_notes_recording', JSON.stringify(data));
+}
+
+function loadFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem('hero_notes_recording');
+    if (saved) {
+      const data = JSON.parse(saved);
+      state.recordedBeats = data.recordedBeats || [];
+      state.lastBeatTime = state.recordedBeats.length > 0 ?
+        state.recordedBeats[state.recordedBeats.length - 1] : 0;
+      els.noteCountDisplay.textContent = state.recordedBeats.length;
+      els.exportBtn.disabled = state.recordedBeats.length === 0;
+
+      if (state.recordedBeats.length > 0) {
+        els.chartInfo.textContent = `Loaded ${state.recordedBeats.length} beats`;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load from localStorage:', err);
+  }
+}
+
 function updatePlayability() {
-  const ready = !!(state.chart && state.audioUrl);
+  const ready = !!(state.chart && state.audioUrl) || (state.editMode && state.audioUrl);
   els.playBtn.disabled = !ready;
   els.rewindBtn.disabled = !ready;
+}
+
+// ============================================================
+// Clear Button - Reset chart and recorded beats (keep video/audio)
+// ============================================================
+els.clearBtn.addEventListener('click', () => {
+  // Stop playback if running
+  if (state.isPlaying) {
+    stopPlayback();
+  }
+
+  // Clear chart and note events
+  state.chart = null;
+  state.noteEvents = [];
+
+  // Clear recorded beats
+  state.recordedBeats = [];
+  state.lastBeatTime = 0;
+  state.originalOffsetMs = 0;
+
+  // Clear localStorage
+  localStorage.removeItem('hero_notes_recording');
+
+  // Reset displays
+  els.noteCountDisplay.textContent = '0';
+  els.hitCountDisplay.textContent = '0';
+  els.bpmDisplay.textContent = '-';
+  els.offsetDisplay.textContent = '-';
+  els.chartInfo.textContent = '未選択';
+
+  // Disable export button
+  els.exportBtn.disabled = true;
+
+  // Update playability
+  updatePlayability();
+
+  // Clear canvas
+  ctx.clearRect(0, 0, els.canvas.clientWidth, els.canvas.clientHeight);
+
+  console.log('Cleared: chart, recorded beats, and localStorage (video/audio preserved)');
+});
+
+// ============================================================
+// Countdown Display
+// ============================================================
+function showCountdown(seconds) {
+  state.countdownMode = true;
+  state.countdownValue = seconds;
+
+  // Create countdown overlay if it doesn't exist
+  let countdownEl = document.getElementById('countdownOverlay');
+  if (!countdownEl) {
+    countdownEl = document.createElement('div');
+    countdownEl.id = 'countdownOverlay';
+    countdownEl.style.cssText = `
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 120px;
+      font-weight: bold;
+      color: var(--accent);
+      text-shadow: 0 0 30px var(--accent-glow);
+      z-index: 100;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.3);
+    `;
+    document.querySelector('.video-wrap').appendChild(countdownEl);
+  }
+
+  countdownEl.style.display = 'flex';
+  countdownEl.textContent = seconds;
+
+  const countdownInterval = setInterval(() => {
+    state.countdownValue--;
+    if (state.countdownValue > 0) {
+      countdownEl.textContent = state.countdownValue;
+    } else {
+      clearInterval(countdownInterval);
+      countdownEl.style.display = 'none';
+      state.countdownMode = false;
+    }
+  }, 1000);
 }
 
 // ============================================================
@@ -524,16 +893,45 @@ els.playBtn.addEventListener('click', async () => {
   // 一時停止中 → 再開
   if (state.isPlaying && state.isPaused) {
     state.isPaused = false;
-    els.audio.play();
-    if (state.videoUrl) els.video.play();
-    els.playBtn.textContent = '⏸ Pause';
-    requestAnimationFrame(loop);
+
+    // In edit mode, go back 5 seconds and show countdown
+    if (state.editMode) {
+      const currentTime = els.audio.currentTime;
+      const resumeTime = Math.max(0, currentTime - 5);
+
+      // Set audio/video to 5 seconds before pause point
+      els.audio.currentTime = resumeTime;
+      if (state.videoUrl) els.video.currentTime = resumeTime;
+
+      // Show countdown
+      showCountdown(5);
+
+      // Wait for countdown then resume
+      setTimeout(async () => {
+        try {
+          await els.audio.play();
+          if (state.videoUrl) await els.video.play();
+          els.playBtn.textContent = '⏸ Pause';
+          requestAnimationFrame(loop);
+        } catch (err) {
+          console.error('再生エラー:', err);
+          stopPlayback();
+        }
+      }, 5000);
+    } else {
+      // Normal resume
+      els.audio.play();
+      if (state.videoUrl) els.video.play();
+      els.playBtn.textContent = '⏸ Pause';
+      requestAnimationFrame(loop);
+    }
     return;
   }
 
   // 再生中 → 一時停止
   if (state.isPlaying && !state.isPaused) {
     state.isPaused = true;
+    state.pauseTime = els.audio.currentTime;
     els.audio.pause();
     els.video.pause();
     if (state.rafId) cancelAnimationFrame(state.rafId);
@@ -650,6 +1048,23 @@ function loop() {
   // 判定ラインをキャンバスに描画
   drawJudgmentLine(judgmentX, noteY, half);
 
+  // In edit mode, display recorded beats in real-time
+  if (state.editMode && state.recordedBeats.length > 0) {
+    for (const beatTime of state.recordedBeats) {
+      const dt = beatTime - currentMs;
+
+      // Only show beats that are approaching or have just passed
+      if (dt > TRAVEL_MS) continue;
+      if (dt < -DESPAWN_MS) continue;
+
+      const progress = 1 - (dt / TRAVEL_MS);
+      const x = judgmentX + (w - judgmentX) * (1 - progress);
+
+      // Draw recorded beat as a different color (green)
+      drawRecordedBeat(x, noteY, dt);
+    }
+  }
+
   // ノーツ描画
   for (const note of state.noteEvents) {
     const dt = note.absMs - currentMs;
@@ -759,6 +1174,31 @@ function drawNote(x, y, hit, dt) {
   ctx.fill();
 }
 
+function drawRecordedBeat(x, y, dt) {
+  const radius = 18;
+
+  // Glow effect for recorded beats (green)
+  const grd = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
+  grd.addColorStop(0, 'rgba(0, 229, 255, 0.6)');
+  grd.addColorStop(1, 'rgba(0, 229, 255, 0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main body (cyan)
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Highlight
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.beginPath();
+  ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function triggerPulse() {
   els.pulse.classList.remove('active');
   void els.pulse.offsetWidth;
@@ -818,7 +1258,12 @@ document.addEventListener('keydown', (e) => {
 
   if (e.code === 'Space') {
     e.preventDefault();
-    if (!els.playBtn.disabled) els.playBtn.click();
+    // In edit mode, record beats instead of play/pause
+    if (state.editMode && state.isPlaying) {
+      recordBeat();
+    } else if (!els.playBtn.disabled) {
+      els.playBtn.click();
+    }
   } else if (e.code === 'ArrowUp') {
     e.preventDefault();
     const vol = Math.min(100, parseInt(els.volumeSlider.value) + 10);
