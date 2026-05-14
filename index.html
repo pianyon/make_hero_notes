@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-i18n-title="player.title">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rhythm Player — Overlay</title>
+<script src="i18n.js"></script>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -289,40 +290,41 @@
 <button id="viewToggle">⊟ シアター</button>
 
 <header>
-  <h1>◆ Rhythm Player — Overlay</h1>
+  <h1 data-i18n="player.h1">◆ Rhythm Player — Overlay</h1>
   <div class="header-nav">
-    <a href="editor.html" class="nav-link">Editor</a>
-    <a href="help.html" class="nav-link">? Help</a>
+    <a href="editor.html" class="nav-link" data-i18n="common.nav.editor">Editor</a>
+    <a href="help.html" class="nav-link" data-i18n="common.nav.help">? Help</a>
+    <div id="langSwitcher"></div>
   </div>
 </header>
 
 <div class="controls">
   <div class="control-group">
-    <label>譜面 (JSON)</label>
+    <label data-i18n="player.ctrl.chart">譜面 (JSON)</label>
     <input type="file" id="chartFile" accept=".json">
     <div class="file-info" id="chartInfo">未選択</div>
   </div>
   <div class="control-group">
-    <label>動画</label>
+    <label data-i18n="player.ctrl.video">動画</label>
     <input type="file" id="videoFile" accept="video/*">
     <div class="file-info" id="videoInfo">未選択</div>
   </div>
   <div class="control-group">
-    <label>音声</label>
+    <label data-i18n="player.ctrl.audio">音声</label>
     <input type="file" id="audioFile" accept="audio/*">
     <div class="file-info" id="audioInfo">未選択</div>
   </div>
   <div class="control-group">
-    <label>BPM 上書き</label>
-    <input type="number" class="number-input" id="bpmOverride" placeholder="auto" step="0.01">
+    <label data-i18n="player.ctrl.bpm">BPM 上書き</label>
+    <input type="number" class="number-input" id="bpmOverride" placeholder="auto" data-i18n-attr="placeholder:player.ph.auto" step="0.01">
   </div>
   <div class="control-group">
-    <label>Offset (ms)</label>
-    <input type="number" class="number-input" id="offsetOverride" placeholder="auto" step="10">
+    <label data-i18n="player.ctrl.offset">Offset (ms)</label>
+    <input type="number" class="number-input" id="offsetOverride" placeholder="auto" data-i18n-attr="placeholder:player.ph.auto" step="10">
   </div>
   <div class="control-group">
     <label>&nbsp;</label>
-    <button class="secondary" id="rewindBtn" disabled>|◀ Rewind</button>
+    <button class="secondary" id="rewindBtn" data-i18n="player.btn.rewind" disabled>|◀ Rewind</button>
   </div>
   <div class="control-group">
     <label>&nbsp;</label>
@@ -330,20 +332,20 @@
   </div>
   <div class="control-group">
     <label>&nbsp;</label>
-    <button class="secondary" id="stopBtn" disabled>■ Stop</button>
+    <button class="secondary" id="stopBtn" data-i18n="player.btn.stop" disabled>■ Stop</button>
   </div>
   <div class="control-group">
-    <label>Volume</label>
+    <label data-i18n="player.ctrl.volume">Volume</label>
     <input type="range" id="volumeSlider" min="0" max="100" value="100" style="width:80px;accent-color:var(--accent);">
   </div>
   <div class="control-group">
-    <label>Video Speed</label>
+    <label data-i18n="player.ctrl.videoSpeed">Video Speed</label>
     <input type="range" id="videoSpeedSlider" min="10" max="400" value="100" style="width:80px;accent-color:var(--accent);">
     <span id="videoSpeedDisplay" style="font-size:10px;color:var(--text-dim);">1.0x</span>
   </div>
   <div class="control-group">
     <label>&nbsp;</label>
-    <button class="secondary" id="sampleBtn">サンプル譜面ロード</button>
+    <button class="secondary" id="sampleBtn" data-i18n="player.btn.sample">サンプル譜面ロード</button>
   </div>
   <div class="control-group">
     <label>&nbsp;</label>
@@ -351,27 +353,27 @@
   </div>
   <div class="control-group">
     <label>&nbsp;</label>
-    <button class="secondary" id="clearBtn">🗑️ Clear</button>
+    <button class="secondary" id="clearBtn" data-i18n="player.btn.clear">🗑️ Clear</button>
   </div>
   <div class="control-group">
     <label>&nbsp;</label>
-    <button class="secondary" id="exportBtn" disabled>💾 Export</button>
+    <button class="secondary" id="exportBtn" data-i18n="player.btn.export" disabled>💾 Export</button>
   </div>
 </div>
 
 <div class="stage">
   <div class="video-wrap">
-    <div class="video-placeholder" id="videoPlaceholder">VIDEO PLACEHOLDER</div>
+    <div class="video-placeholder" id="videoPlaceholder" data-i18n="player.ph.video">VIDEO PLACEHOLDER</div>
     <video id="video" style="display:none;" muted playsinline></video>
     <canvas id="noteCanvas"></canvas>
     <div class="pulse" id="pulse"></div>
   </div>
   <div class="info-bar">
-    <span class="accent">TIME: <strong id="timeDisplay">0.000</strong></span>
-    <span>BPM: <strong id="bpmDisplay">-</strong></span>
-    <span>OFFSET: <strong id="offsetDisplay">-</strong> ms</span>
-    <span>NOTES: <strong id="noteCountDisplay">0</strong></span>
-    <span>HITS: <strong id="hitCountDisplay">0</strong></span>
+    <span class="accent"><span data-i18n="player.info.time">TIME:</span> <strong id="timeDisplay">0.000</strong></span>
+    <span><span data-i18n="player.info.bpm">BPM:</span> <strong id="bpmDisplay">-</strong></span>
+    <span><span data-i18n="player.info.offset">OFFSET:</span> <strong id="offsetDisplay">-</strong> ms</span>
+    <span><span data-i18n="player.info.notes">NOTES:</span> <strong id="noteCountDisplay">0</strong></span>
+    <span><span data-i18n="player.info.hits">HITS:</span> <strong id="hitCountDisplay">0</strong></span>
   </div>
 </div>
 
@@ -584,7 +586,7 @@ els.offsetOverride.addEventListener('change', () => { if (state.chart) applyChar
 // ============================================================
 els.editModeBtn.addEventListener('click', () => {
   state.editMode = !state.editMode;
-  els.editModeBtn.textContent = state.editMode ? '🎯 Edit Mode ON' : '🎯 Edit Mode';
+  els.editModeBtn.textContent = i18n.t(state.editMode ? 'player.btn.editModeOn' : 'player.btn.editMode');
   els.editModeBtn.style.background = state.editMode ? 'var(--accent)' : 'transparent';
   els.editModeBtn.style.color = state.editMode ? 'var(--bg)' : 'var(--text)';
 
@@ -599,7 +601,7 @@ els.editModeBtn.addEventListener('click', () => {
       state.originalOffsetMs = 0; // Track original offset
       els.noteCountDisplay.textContent = '0';
       els.hitCountDisplay.textContent = '0';
-      els.chartInfo.textContent = 'Recording Mode';
+      els.chartInfo.textContent = i18n.t('player.fi.recording');
     }
 
     // Load saved beats from localStorage if available
@@ -664,7 +666,7 @@ function convertChartToRecordedBeats() {
   state.originalOffsetMs = state.chart.timing.offsetMs;
 
   els.noteCountDisplay.textContent = state.recordedBeats.length;
-  els.chartInfo.textContent = `Continuing from ${state.recordedBeats.length} beats`;
+  els.chartInfo.textContent = i18n.t('player.fi.continuing', { n: state.recordedBeats.length });
 
   // Save to localStorage
   saveToLocalStorage();
@@ -727,7 +729,7 @@ function convertBeatsToChart() {
   };
 
   applyChart(chart);
-  els.chartInfo.textContent = 'Generated from recording';
+  els.chartInfo.textContent = i18n.t('player.fi.generated');
 
   console.log('Chart converted:', {
     bpm: estimatedBpm.toFixed(2),
@@ -788,7 +790,7 @@ function loadFromLocalStorage() {
       els.exportBtn.disabled = state.recordedBeats.length === 0;
 
       if (state.recordedBeats.length > 0) {
-        els.chartInfo.textContent = `Loaded ${state.recordedBeats.length} beats`;
+        els.chartInfo.textContent = i18n.t('player.fi.loaded', { n: state.recordedBeats.length });
       }
     }
   } catch (err) {
@@ -828,7 +830,7 @@ els.clearBtn.addEventListener('click', () => {
   els.hitCountDisplay.textContent = '0';
   els.bpmDisplay.textContent = '-';
   els.offsetDisplay.textContent = '-';
-  els.chartInfo.textContent = '未選択';
+  els.chartInfo.textContent = i18n.t('player.fi.empty');
 
   // Disable export button
   els.exportBtn.disabled = true;
@@ -911,7 +913,7 @@ els.playBtn.addEventListener('click', async () => {
         try {
           await els.audio.play();
           if (state.videoUrl) await els.video.play();
-          els.playBtn.textContent = '⏸ Pause';
+          els.playBtn.textContent = i18n.t('player.btn.pause');
           requestAnimationFrame(loop);
         } catch (err) {
           console.error('再生エラー:', err);
@@ -922,7 +924,7 @@ els.playBtn.addEventListener('click', async () => {
       // Normal resume
       els.audio.play();
       if (state.videoUrl) els.video.play();
-      els.playBtn.textContent = '⏸ Pause';
+      els.playBtn.textContent = i18n.t('player.btn.pause');
       requestAnimationFrame(loop);
     }
     return;
@@ -936,7 +938,7 @@ els.playBtn.addEventListener('click', async () => {
     els.video.pause();
     if (state.rafId) cancelAnimationFrame(state.rafId);
     state.rafId = null;
-    els.playBtn.textContent = '▶ Resume';
+    els.playBtn.textContent = i18n.t('player.btn.resume');
     return;
   }
 
@@ -954,7 +956,7 @@ els.playBtn.addEventListener('click', async () => {
       els.video.currentTime = 0;
       await els.video.play();
     }
-    els.playBtn.textContent = '⏸ Pause';
+    els.playBtn.textContent = i18n.t('player.btn.pause');
     els.stopBtn.disabled = false;
     requestAnimationFrame(loop);
   } catch (err) {
@@ -974,7 +976,7 @@ function stopPlayback() {
   state.isPaused = false;
   els.audio.pause();
   els.video.pause();
-  els.playBtn.textContent = '▶ Play';
+  els.playBtn.textContent = i18n.t('player.btn.play');
   els.stopBtn.disabled = true;
   if (state.rafId) cancelAnimationFrame(state.rafId);
   state.rafId = null;
@@ -1238,7 +1240,7 @@ els.sampleBtn.addEventListener('click', () => {
     ]
   };
   applyChart(sample);
-  els.chartInfo.textContent = "サンプル譜面（読み込み済み）";
+  els.chartInfo.textContent = i18n.t('player.fi.sample');
 });
 
 // ============================================================
@@ -1246,7 +1248,7 @@ els.sampleBtn.addEventListener('click', () => {
 // ============================================================
 $('viewToggle').addEventListener('click', () => {
   const minimal = document.body.classList.toggle('minimal');
-  $('viewToggle').textContent = minimal ? '⊞ UI表示' : '⊟ シアター';
+  $('viewToggle').textContent = i18n.t(minimal ? 'player.theater.off' : 'player.theater.on');
 });
 
 // ============================================================
@@ -1284,8 +1286,38 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
+// i18n 連携: 言語切替時の動的テキスト再適用
+// ============================================================
+function refreshDynamicI18n() {
+  // viewToggle
+  const minimal = document.body.classList.contains('minimal');
+  $('viewToggle').textContent = i18n.t(minimal ? 'player.theater.off' : 'player.theater.on');
+
+  // playBtn (状態依存)
+  let playKey = 'player.btn.play';
+  if (state.isPlaying && state.isPaused) playKey = 'player.btn.resume';
+  else if (state.isPlaying && !state.isPaused) playKey = 'player.btn.pause';
+  els.playBtn.textContent = i18n.t(playKey);
+
+  // editModeBtn (状態依存)
+  els.editModeBtn.textContent = i18n.t(state.editMode ? 'player.btn.editModeOn' : 'player.btn.editMode');
+
+  // ファイル未選択時のみ翻訳を反映 (ファイル名は残す)
+  if (!state.chart && state.recordedBeats.length === 0) {
+    els.chartInfo.textContent = i18n.t('player.fi.empty');
+  }
+  if (!state.videoUrl) els.videoInfo.textContent = i18n.t('player.fi.empty');
+  if (!state.audioUrl) els.audioInfo.textContent = i18n.t('player.fi.empty');
+}
+
+document.addEventListener('i18n:changed', refreshDynamicI18n);
+
+// ============================================================
 // Init
 // ============================================================
+i18n.applyI18n();
+i18n.mountSwitcher(document.getElementById('langSwitcher'));
+refreshDynamicI18n();
 resizeCanvas();
 </script>
 

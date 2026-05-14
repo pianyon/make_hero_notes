@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-i18n-title="help.title">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rhythm Tool — Help</title>
+<script src="i18n.js"></script>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -136,236 +137,224 @@
 <body>
 
 <div class="top-bar">
-  <h1>◆ Rhythm Tool — Help</h1>
+  <h1 data-i18n="help.h1">◆ Rhythm Tool — Help</h1>
   <div class="nav-links">
-    <a href="index.html" class="nav-link">← Player</a>
-    <a href="editor.html" class="nav-link">Editor →</a>
+    <a href="index.html" class="nav-link" data-i18n="common.nav.playerBack">← Player</a>
+    <a href="editor.html" class="nav-link" data-i18n="common.nav.editorNext">Editor →</a>
+    <div id="langSwitcher"></div>
   </div>
 </div>
 
 <div class="content">
 
-  <!-- ── Overview ── -->
-  <h2>Overview</h2>
-  <p>
-    このツールは <strong>Guitar Hero / Fap Hero スタイルの譜面を作って再生する</strong> ための2画面構成の Web アプリです。
-    <strong>Editor</strong> で譜面を作り、<strong>Player</strong> で動画・音声と同期させて再生します。
-    譜面は JSON ファイルで管理されます。
-  </p>
+  <h2 data-i18n="help.overview.h">Overview</h2>
+  <p data-i18n-html="help.overview.body"></p>
 
-  <!-- ── Workflow ── -->
-  <h2>作業フロー</h2>
+  <h2 data-i18n="help.workflow.h">作業フロー</h2>
   <ol class="steps">
     <li>
       <div class="step-num">1</div>
       <div class="step-body">
-        <div class="step-title">音声・動画を用意する</div>
-        <div class="step-detail">再生したい音声ファイル（mp3/wav 等）と、オーバーレイする動画ファイル（mp4 等）をローカルに用意します。動画は必須ではありません。</div>
+        <div class="step-title" data-i18n="help.workflow.s1t"></div>
+        <div class="step-detail" data-i18n-html="help.workflow.s1d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">2</div>
       <div class="step-body">
-        <div class="step-title">Editor で BPM と Offset を設定する</div>
-        <div class="step-detail">曲の BPM と Offset を入力します。Offset の意味は下の「<strong>Offset とは</strong>」セクションを参照してください。Grid（分解能）は 16分音符（×4）がおすすめです。</div>
+        <div class="step-title" data-i18n="help.workflow.s2t"></div>
+        <div class="step-detail" data-i18n-html="help.workflow.s2d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">3</div>
       <div class="step-body">
-        <div class="step-title">パターンを作成する</div>
-        <div class="step-detail">左パネル「Patterns」で <strong>+ New Pattern</strong> を押してパターンを追加。名前を付け、ステップシーケンサーでノーツを打ち込みます。1パターンは8拍（デフォルト）のループ単位です。</div>
+        <div class="step-title" data-i18n="help.workflow.s3t"></div>
+        <div class="step-detail" data-i18n-html="help.workflow.s3d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">4</div>
       <div class="step-body">
-        <div class="step-title">タイムラインに並べる</div>
-        <div class="step-detail">パターンカードを右パネル上部の <strong>Timeline</strong> にドラッグ＆ドロップして配置します。ブロック右の <strong>×N</strong> を変えると繰り返し数を指定できます。ブロック同士もドラッグで並び替え可能です。</div>
+        <div class="step-title" data-i18n="help.workflow.s4t"></div>
+        <div class="step-detail" data-i18n-html="help.workflow.s4d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">5</div>
       <div class="step-body">
-        <div class="step-title">プレビューで確認する</div>
-        <div class="step-detail">画面下部の Preview でノーツの流れを確認します。<kbd>Space</kbd> で再生/一時停止、<kbd>,</kbd> で先頭に戻ります。メトロノームの小節頭クリック（高音）でリズムの合わせやすさを確認しましょう。</div>
+        <div class="step-title" data-i18n="help.workflow.s5t"></div>
+        <div class="step-detail" data-i18n-html="help.workflow.s5d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">6</div>
       <div class="step-body">
-        <div class="step-title">JSON をエクスポートする</div>
-        <div class="step-detail">右上の <strong>Export JSON</strong> で譜面ファイルを保存します。</div>
+        <div class="step-title" data-i18n="help.workflow.s6t"></div>
+        <div class="step-detail" data-i18n-html="help.workflow.s6d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">7</div>
       <div class="step-body">
-        <div class="step-title">Player で再生する</div>
-        <div class="step-detail">Player 画面で 譜面 JSON・音声ファイル・動画ファイル を読み込みます。<kbd>Space</kbd> で再生、<kbd>Ctrl</kbd>+<kbd>Enter</kbd> でシアターモードに切り替えるとノーツと動画だけの全画面表示になります。</div>
+        <div class="step-title" data-i18n="help.workflow.s7t"></div>
+        <div class="step-detail" data-i18n-html="help.workflow.s7d"></div>
       </div>
     </li>
   </ol>
 
-  <!-- ── Edit Mode (NEW) ── -->
-  <h2>ダイナミック編集モード（新機能）</h2>
-  <p>
-    <strong>Edit Mode</strong> を使用すると、リズムに合わせてスペースキーを叩くだけでリアルタイムでビートを記録できます。BPM や Offset を手動で入力する必要がありません。
-  </p>
+  <h2 data-i18n="help.editmode.h">ダイナミック編集モード（新機能）</h2>
+  <p data-i18n-html="help.editmode.intro"></p>
   <ol class="steps">
     <li>
       <div class="step-num">1</div>
       <div class="step-body">
-        <div class="step-title">音声・動画を読み込む</div>
-        <div class="step-detail">Player 画面で音声ファイル（とオプションで動画）を読み込みます。</div>
+        <div class="step-title" data-i18n="help.editmode.s1t"></div>
+        <div class="step-detail" data-i18n-html="help.editmode.s1d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">2</div>
       <div class="step-body">
-        <div class="step-title">Edit Mode を有効にする</div>
-        <div class="step-detail"><strong>🎯 Edit Mode</strong> ボタンをクリックします。ボタンがシアン色に変わり、「Edit Mode ON」と表示されます。</div>
+        <div class="step-title" data-i18n="help.editmode.s2t"></div>
+        <div class="step-detail" data-i18n-html="help.editmode.s2d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">3</div>
       <div class="step-body">
-        <div class="step-title">再生してビートを記録</div>
-        <div class="step-detail"><strong>▶ Play</strong> をクリックし、リズムに合わせて <kbd>Space</kbd> キーを叩きます。記録されたビートはシアン色のノートとしてリアルタイムで表示されます。</div>
+        <div class="step-title" data-i18n="help.editmode.s3t"></div>
+        <div class="step-detail" data-i18n-html="help.editmode.s3d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">4</div>
       <div class="step-body">
-        <div class="step-title">一時停止と再開</div>
-        <div class="step-detail"><kbd>⏸ Pause</kbd> で一時停止すると、再開時に5秒戻ってカウントダウンが表示されます。カウントダウン中のスペースキー入力は無視されるため、リズムを再同期する時間があります。</div>
+        <div class="step-title" data-i18n="help.editmode.s4t"></div>
+        <div class="step-detail" data-i18n-html="help.editmode.s4d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">5</div>
       <div class="step-body">
-        <div class="step-title">既存の譜面を続ける</div>
-        <div class="step-detail">既存の JSON 譜面を読み込んでから Edit Mode を有効にすると、その譜面のビートを引き継いで記録を続けることができます。</div>
+        <div class="step-title" data-i18n="help.editmode.s5t"></div>
+        <div class="step-detail" data-i18n-html="help.editmode.s5d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">6</div>
       <div class="step-body">
-        <div class="step-title">エクスポート</div>
-        <div class="step-detail"><strong>💾 Export</strong> をクリックして、記録したビートマップを JSON ファイルとして保存します。BPM は自動的に計算されます。</div>
+        <div class="step-title" data-i18n="help.editmode.s6t"></div>
+        <div class="step-detail" data-i18n-html="help.editmode.s6d"></div>
       </div>
     </li>
     <li>
       <div class="step-num">7</div>
       <div class="step-body">
-        <div class="step-title">再生して確認</div>
-        <div class="step-detail">Edit Mode を無効にして、作成したビートマップを再生して確認します。</div>
+        <div class="step-title" data-i18n="help.editmode.s7t"></div>
+        <div class="step-detail" data-i18n-html="help.editmode.s7d"></div>
       </div>
     </li>
   </ol>
   <div class="callout">
-    <p><strong>ヒント：</strong> 記録中に <kbd>🗑️ Clear</kbd> ボタンをクリックすると、ビートマップをリセットできます（音声・動画は保持されます）。</p>
+    <p data-i18n-html="help.editmode.hint"></p>
   </div>
 
-  <!-- ── Offset ── -->
-  <h2>Offset とは</h2>
-  <p>
-    <strong>Offset（ms）</strong> は「音声ファイルの先頭から、最初の1拍目が来るまでの時間（ミリ秒）」です。
-  </p>
+  <h2 data-i18n="help.offset.h">Offset とは</h2>
+  <p data-i18n-html="help.offset.body1"></p>
   <div class="callout">
-    <p><strong>例：</strong> 音声ファイルの最初の 2 秒間がイントロや無音で、2 秒後に 1 拍目（ビート）が始まる場合 → <strong>Offset = 2000</strong></p>
-    <p>逆に音声がいきなり 1 拍目から始まる場合は <strong>Offset = 0</strong>（デフォルト）のままでOKです。</p>
+    <p data-i18n-html="help.offset.ex1"></p>
+    <p data-i18n-html="help.offset.ex2"></p>
   </div>
-  <p>
-    Offset がズレていると、ノーツと音楽のリズムが噛み合わなくなります。
-    曲を聴きながらメトロノームのクリック音（プレビュー再生）がビートと一致するよう微調整してください。
-    <strong>10ms 単位</strong> で詰めると合わせやすいです。
-  </p>
+  <p data-i18n-html="help.offset.body2"></p>
   <div class="callout warn">
-    <p>BPM や Offset を変更すると既存ノーツの実時間上の位置が変わります。譜面を打ち込む前に確定させるのを推奨します。</p>
+    <p data-i18n="help.offset.warn"></p>
   </div>
 
-  <!-- ── Keyboard: Player ── -->
-  <h2>キーボードショートカット</h2>
+  <h2 data-i18n="help.keyboard.h">キーボードショートカット</h2>
 
-  <h3><span class="badge badge-player">Player</span></h3>
+  <h3><span class="badge badge-player" data-i18n="help.keyboard.playerBadge">Player</span></h3>
   <table class="shortcut-table">
     <tr>
       <td><kbd>Space</kbd></td>
-      <td class="desc">再生 / 一時停止 / 再開</td>
+      <td class="desc" data-i18n="help.keyboard.p_space"></td>
     </tr>
     <tr>
       <td><kbd>↑</kbd></td>
-      <td class="desc">音量 +10%</td>
+      <td class="desc" data-i18n="help.keyboard.p_up"></td>
     </tr>
     <tr>
       <td><kbd>↓</kbd></td>
-      <td class="desc">音量 −10%</td>
+      <td class="desc" data-i18n="help.keyboard.p_down"></td>
     </tr>
     <tr>
       <td><kbd>,</kbd></td>
-      <td class="desc">先頭に巻き戻す（動画・音声・ノーツすべてリセット）</td>
+      <td class="desc" data-i18n="help.keyboard.p_comma"></td>
     </tr>
     <tr>
       <td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td>
-      <td class="desc">シアターモード ↔ 通常 UI の切り替え</td>
+      <td class="desc" data-i18n="help.keyboard.p_ctrl_enter"></td>
     </tr>
   </table>
-  <p>※ テキスト入力欄にフォーカスが当たっているときはショートカットは無効になります。</p>
+  <p data-i18n="help.keyboard.p_note"></p>
 
-  <h3><span class="badge badge-player">Player (Edit Mode)</span></h3>
+  <h3><span class="badge badge-player" data-i18n="help.keyboard.editModeBadge">Player (Edit Mode)</span></h3>
   <table class="shortcut-table">
     <tr>
       <td><kbd>Space</kbd></td>
-      <td class="desc">リズムに合わせてビートを記録（再生中）</td>
+      <td class="desc" data-i18n="help.keyboard.em_space_record"></td>
     </tr>
     <tr>
       <td><kbd>Space</kbd></td>
-      <td class="desc">再生 / 一時停止（記録していない時）</td>
+      <td class="desc" data-i18n="help.keyboard.em_space_play"></td>
     </tr>
   </table>
 
-  <h3><span class="badge badge-editor">Editor</span></h3>
+  <h3><span class="badge badge-editor" data-i18n="help.keyboard.editorBadge">Editor</span></h3>
   <table class="shortcut-table">
     <tr>
       <td><kbd>Space</kbd></td>
-      <td class="desc">プレビュー 再生 / 一時停止</td>
+      <td class="desc" data-i18n="help.keyboard.e_space"></td>
     </tr>
     <tr>
       <td><kbd>,</kbd></td>
-      <td class="desc">プレビューを先頭に巻き戻す（再生中の場合はそのまま再生継続）</td>
+      <td class="desc" data-i18n="help.keyboard.e_comma"></td>
     </tr>
   </table>
-  <p>※ テキスト入力欄・セレクトボックスにフォーカス中はショートカット無効。パターン名編集中は <kbd>Enter</kbd> で確定、<kbd>Esc</kbd> でキャンセルも使えます。</p>
+  <p data-i18n-html="help.keyboard.e_note"></p>
 
-  <!-- ── Tips ── -->
-  <h2>Tips</h2>
+  <h2 data-i18n="help.tips.h">Tips</h2>
 
-  <h3>BPM が分からないとき</h3>
-  <p>BPM 検出ツール（例: <strong>Tap BPM</strong> 系の Web ツール）で曲に合わせてタップすると大体の BPM が得られます。その後 Offset でズレを微修正するのが効率的です。</p>
+  <h3 data-i18n="help.tips.bpm_h"></h3>
+  <p data-i18n-html="help.tips.bpm_b"></p>
 
-  <h3>パターンの使い方</h3>
-  <p>「Aメロ」「サビ」「ブリッジ」のようにセクション単位でパターンを分けると、タイムライン上での管理が楽になります。同じフレーズはパターンを繰り返し（×N）で使い回せます。</p>
+  <h3 data-i18n="help.tips.pat_h"></h3>
+  <p data-i18n="help.tips.pat_b"></p>
 
-  <h3>グリッド変更の注意</h3>
-  <p>Grid（分解能）を変更するとすべてのパターンのノーツがクリアされます。譜面を打ち込み始める前に決めてください。</p>
+  <h3 data-i18n="help.tips.grid_h"></h3>
+  <p data-i18n="help.tips.grid_b"></p>
 
-  <h3>譜面 JSON のバックアップ</h3>
-  <p>ブラウザはデータを保存しません。こまめに <strong>Export JSON</strong> でファイルに保存してください。次回は <strong>Import JSON</strong> で読み込めます。</p>
+  <h3 data-i18n="help.tips.backup_h"></h3>
+  <p data-i18n-html="help.tips.backup_b"></p>
 
-  <h3>Edit Mode の活用（新機能）</h3>
-  <p>Edit Mode は BPM や Offset が分からない場合に最適です。リズムに合わせてスペースキーを叩くだけで、BPM が自動的に計算されます。既存の譜面を Edit Mode で開くと、その譜面の続きから記録を続けることができます。</p>
+  <h3 data-i18n="help.tips.em_h"></h3>
+  <p data-i18n="help.tips.em_b"></p>
 
-  <h3>動画速度の調整（新機能）</h3>
-  <p><strong>Video Speed</strong> スライダーで動画の再生速度を 0.1x から 4.0x まで調整できます。PMV 制作時に、曲の速い部分で動画を加速したり、好きなシーンでスローモーションにしたりと、リアルタイムで編集できます。</p>
+  <h3 data-i18n="help.tips.vs_h"></h3>
+  <p data-i18n-html="help.tips.vs_b"></p>
 
-  <h3>動画ループ（新機能）</h3>
-  <p>動画が音声より短い場合、自動的にループ再生されます。短いループ動画を背景に使って、長い曲全体で再生できます。</p>
+  <h3 data-i18n="help.tips.vl_h"></h3>
+  <p data-i18n="help.tips.vl_b"></p>
 
-  <h3>自動保存（新機能）</h3>
-  <p>Edit Mode で記録中のデータは localStorage に自動保存されます。ブラウザを閉じても、次回 Edit Mode を有効にすると記録を続けることができます。</p>
+  <h3 data-i18n="help.tips.as_h"></h3>
+  <p data-i18n="help.tips.as_b"></p>
 
 </div>
+
+<script>
+  i18n.applyI18n();
+  i18n.mountSwitcher(document.getElementById('langSwitcher'));
+</script>
 
 </body>
 </html>

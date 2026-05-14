@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-i18n-title="editor.title">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rhythm Editor</title>
+<script src="i18n.js"></script>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -200,54 +201,55 @@
 <body>
 
 <div class="top-bar">
-  <h1>◆ Rhythm Editor</h1>
+  <h1 data-i18n="editor.h1">◆ Rhythm Editor</h1>
   <div class="meta-fields">
     <div class="meta-field">
-      <label>Title</label>
-      <input id="metaTitle" placeholder="タイトル" value="新規譜面">
+      <label data-i18n="editor.meta.title">Title</label>
+      <input id="metaTitle" placeholder="タイトル" data-i18n-attr="placeholder:editor.meta.titlePh" value="新規譜面">
     </div>
     <div class="meta-field">
-      <label>BPM</label>
+      <label data-i18n="editor.meta.bpm">BPM</label>
       <input id="metaBpm" type="number" value="120" min="1" max="999" step="0.01">
     </div>
     <div class="meta-field">
-      <label>Offset (ms)</label>
+      <label data-i18n="editor.meta.offset">Offset (ms)</label>
       <input id="metaOffset" type="number" value="0" step="10">
     </div>
     <div class="meta-field">
-      <label>Grid</label>
+      <label data-i18n="editor.meta.grid">Grid</label>
       <select id="metaSpb">
-        <option value="1">4分音符 (×1)</option>
-        <option value="2">8分音符 (×2)</option>
-        <option value="4" selected>16分音符 (×4)</option>
-        <option value="8">32分音符 (×8)</option>
+        <option value="1" data-i18n="editor.grid.q1">4分音符 (×1)</option>
+        <option value="2" data-i18n="editor.grid.q2">8分音符 (×2)</option>
+        <option value="4" selected data-i18n="editor.grid.q4">16分音符 (×4)</option>
+        <option value="8" data-i18n="editor.grid.q8">32分音符 (×8)</option>
       </select>
     </div>
   </div>
   <div class="spacer"></div>
   <div class="top-actions">
-    <a href="index.html" class="nav-link">← Player</a>
-    <a href="help.html" class="nav-link">? Help</a>
-    <button id="importBtn">Import JSON</button>
-    <button class="primary" id="exportBtn">Export JSON</button>
+    <a href="index.html" class="nav-link" data-i18n="common.nav.playerBack">← Player</a>
+    <a href="help.html" class="nav-link" data-i18n="common.nav.help">? Help</a>
+    <button id="importBtn" data-i18n="editor.btn.import">Import JSON</button>
+    <button class="primary" id="exportBtn" data-i18n="editor.btn.export">Export JSON</button>
     <input type="file" id="importFile" accept=".json">
+    <div id="langSwitcher"></div>
   </div>
 </div>
 
 <div class="main-area">
   <div class="pool-panel">
-    <div class="panel-header">Patterns</div>
+    <div class="panel-header" data-i18n="editor.panel.patterns">Patterns</div>
     <div class="pool-list" id="poolList"></div>
     <div class="pool-footer">
-      <button id="addPatternBtn">+ New Pattern</button>
+      <button id="addPatternBtn" data-i18n="editor.btn.addPattern">+ New Pattern</button>
     </div>
   </div>
 
   <div class="right-panel">
     <div class="timeline-panel">
       <div class="panel-header">
-        Timeline
-        <span class="hint">— Pool からドラッグして追加 / ブロックをドラッグで並び替え</span>
+        <span data-i18n="editor.panel.timeline">Timeline</span>
+        <span class="hint" data-i18n="editor.panel.hint">— Pool からドラッグして追加 / ブロックをドラッグで並び替え</span>
       </div>
       <div class="timeline-track" id="timelineTrack"></div>
     </div>
@@ -296,7 +298,7 @@ let timelineUndo = null;
 
 const chart = {
   version: '1.0',
-  meta: { title: '新規譜面', author: '', createdAt: new Date().toISOString() },
+  meta: { title: i18n.t('editor.meta.titleDefault'), author: '', createdAt: new Date().toISOString() },
   media: { video: '', audio: '', videoOffsetMs: 0 },
   timing: { bpm: 120, offsetMs: 0, stepsPerBeat: 4 },
   patterns: {},
@@ -357,7 +359,7 @@ function syncPatternNameDisplays(id, name) {
     }
   });
   if (selectedPatternId === id) {
-    els.seqTitle.textContent = 'Step Sequencer — ' + (name || id);
+    els.seqTitle.textContent = i18n.t('editor.panel.seqNamed', { name: name || id });
   }
 }
 
@@ -372,7 +374,7 @@ function newPatternId() { return 'p' + (++patternCounter); }
 
 function addPattern() {
   const id = newPatternId();
-  chart.patterns[id] = { name: 'Pattern ' + patternCounter, lengthInBeats: 8, notes: [] };
+  chart.patterns[id] = { name: i18n.t('editor.pattern.defaultName', { n: patternCounter }), lengthInBeats: 8, notes: [] };
   selectPattern(id);
   renderPool();
   return id;
@@ -457,7 +459,7 @@ function createPatternCard(id, pattern) {
   const nameInput = document.createElement('input');
   nameInput.className = 'card-name-input';
   nameInput.value = pattern.name;
-  nameInput.placeholder = 'Pattern name';
+  nameInput.placeholder = i18n.t('editor.pattern.namePh');
   stopBubble(nameInput, 'mousedown');
   nameInput.addEventListener('input', () => {
     chart.patterns[id].name = nameInput.value;
@@ -471,10 +473,10 @@ function createPatternCard(id, pattern) {
   const delBtn = document.createElement('button');
   delBtn.className = 'card-del';
   delBtn.textContent = '×';
-  delBtn.title = '削除';
+  delBtn.title = i18n.t('editor.pattern.deleteTitle');
   delBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (confirm(`"${pattern.name}" を削除しますか？`)) deletePattern(id);
+    if (confirm(i18n.t('editor.pattern.confirmDelete', { name: pattern.name }))) deletePattern(id);
   });
 
   card.appendChild(nameInput);
@@ -568,7 +570,7 @@ function createTimelineBlock(entry, i) {
 function createTimelineEndZone() {
   const endZone = document.createElement('div');
   endZone.className = 'tl-end-zone';
-  endZone.textContent = chart.timeline.length ? '+ ここにドロップ' : 'Pool からパターンをドラッグ';
+  endZone.textContent = i18n.t(chart.timeline.length ? 'editor.panel.endAdd' : 'editor.panel.endEmpty');
   endZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     clearInsertMarkers();
@@ -656,15 +658,15 @@ function createBeatColumn(beat, spb, activeSteps) {
 function renderSequencer() {
   const pattern = chart.patterns[selectedPatternId];
   if (!pattern) {
-    els.seqTitle.textContent = 'Step Sequencer — パターンを選択してください';
+    els.seqTitle.textContent = i18n.t('editor.panel.seqDefault');
     const empty = document.createElement('p');
     empty.className = 'seq-empty';
-    empty.textContent = '← Pool でパターンを選択してください';
+    empty.textContent = i18n.t('editor.panel.seqEmpty');
     els.seqGrid.replaceChildren(empty);
     return;
   }
 
-  els.seqTitle.textContent = 'Step Sequencer — ' + pattern.name;
+  els.seqTitle.textContent = i18n.t('editor.panel.seqNamed', { name: pattern.name });
   const spb = chart.timing.stepsPerBeat;
   const activeSteps = new Set(pattern.notes.map(n => n.step));
 
@@ -834,7 +836,7 @@ function previewLoop(ts) {
   updateTimeLabel();
   if (preview.currentMs >= preview.totalMs) {
     preview.isPlaying = false;
-    els.prevPlayBtn.textContent = '▶ Play';
+    els.prevPlayBtn.textContent = i18n.t('editor.preview.play');
     return;
   }
   preview.rafId = requestAnimationFrame(previewLoop);
@@ -844,14 +846,14 @@ function startPreview() {
   if (preview.totalMs === 0) return;
   preview.isPlaying = true;
   preview.lastTimestamp = performance.now();
-  els.prevPlayBtn.textContent = '⏸ Pause';
+  els.prevPlayBtn.textContent = i18n.t('editor.preview.pause');
   preview.rafId = requestAnimationFrame(previewLoop);
 }
 
 function pausePreview() {
   preview.isPlaying = false;
   if (preview.rafId) cancelAnimationFrame(preview.rafId);
-  els.prevPlayBtn.textContent = '▶ Play';
+  els.prevPlayBtn.textContent = i18n.t('editor.preview.play');
 }
 
 function rewindPreview() {
@@ -866,7 +868,7 @@ function rewindPreview() {
 function updateTimeLabel() {
   const c = (preview.currentMs / 1000).toFixed(3);
   const t = (preview.totalMs / 1000).toFixed(3);
-  els.timeLabel.textContent = c + ' / ' + t + ' s';
+  els.timeLabel.textContent = i18n.t('editor.preview.timeLabel', { cur: c, total: t });
 }
 
 // ============================================================
@@ -886,7 +888,7 @@ els.metaOffset.addEventListener('input', () => {
 els.metaSpb.addEventListener('change', () => {
   const newSpb = parseInt(els.metaSpb.value);
   const hasNotes = Object.values(chart.patterns).some(p => p.notes.length > 0);
-  if (hasNotes && !confirm('グリッドを変更するとすべてのノーツがクリアされます。続けますか？')) {
+  if (hasNotes && !confirm(i18n.t('editor.alert.gridChange'))) {
     els.metaSpb.value = chart.timing.stepsPerBeat;
     return;
   }
@@ -908,7 +910,7 @@ els.prevPlayBtn.addEventListener('click', () => {
 
 els.metroBtn.addEventListener('click', () => {
   metronomeEnabled = !metronomeEnabled;
-  els.metroBtn.textContent = '♩ Click: ' + (metronomeEnabled ? 'ON' : 'OFF');
+  els.metroBtn.textContent = i18n.t(metronomeEnabled ? 'editor.preview.metroOn' : 'editor.preview.metroOff');
   // AudioContext は最初のユーザー操作で初期化
   if (metronomeEnabled) getAudioCtx();
 });
@@ -970,7 +972,7 @@ els.importFile.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try { loadChart(JSON.parse(await file.text())); }
-  catch (err) { alert('読み込みに失敗: ' + err.message); }
+  catch (err) { alert(i18n.t('editor.alert.loadFail', { err: err.message })); }
   e.target.value = '';
 });
 
@@ -987,7 +989,7 @@ els.exportBtn.addEventListener('click', () => {
 
 function loadChart(json) {
   if (!json.timing || !json.patterns || !Array.isArray(json.timeline)) {
-    throw new Error('Invalid chart: timing / patterns / timeline が見つかりません');
+    throw new Error(i18n.t('editor.error.invalidChart'));
   }
   if (json.version && json.version !== '1.0') {
     console.warn('Chart version mismatch: expected 1.0, got', json.version);
@@ -1019,13 +1021,30 @@ function loadChart(json) {
 }
 
 // ============================================================
+// i18n 連携
+// ============================================================
+function refreshDynamicI18n() {
+  els.prevPlayBtn.textContent = i18n.t(preview.isPlaying ? 'editor.preview.pause' : 'editor.preview.play');
+  els.metroBtn.textContent = i18n.t(metronomeEnabled ? 'editor.preview.metroOn' : 'editor.preview.metroOff');
+  updateTimeLabel();
+  renderPool();
+  renderTimeline();
+  renderSequencer();
+}
+document.addEventListener('i18n:changed', refreshDynamicI18n);
+
+// ============================================================
 // Init
 // ============================================================
+i18n.applyI18n();
+i18n.mountSwitcher(document.getElementById('langSwitcher'));
+els.metaTitle.value = chart.meta.title;
 addPattern();
 renderTimeline();
 rebuildPreviewEvents();
 resizePreviewCanvas();
 renderPreviewFrame();
+refreshDynamicI18n();
 </script>
 </body>
 </html>
